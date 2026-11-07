@@ -15,13 +15,17 @@ PLUGIN   := developer-plugin
 MKT_NAME := developer-plugin-local
 
 .DEFAULT_GOAL := help
-.PHONY: help validate install-claude uninstall-claude install-codex install-gemini install-copilot install-all
+.PHONY: help validate sync-rules install-claude uninstall-claude install-codex install-gemini install-copilot install-all
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-20s %s\n", $$1, $$2}'
 
-validate: ## Check manifests and skill frontmatter
+validate: ## Check manifests, skills and generated rule copies
 	@python3 scripts/validate.py
+	@python3 scripts/sync_rules.py --check
+
+sync-rules: ## Regenerate skill and GEMINI.md from rules/coding-standards.md
+	@python3 scripts/sync_rules.py
 
 install-claude: validate ## Install into Claude Code (user scope)
 	@if command -v claude >/dev/null 2>&1; then \

@@ -23,6 +23,20 @@ skills/<name>/SKILL.md       shared skills (read by all four tools)
 Keep the `version` the same in all three manifests. `scripts/validate.py` checks
 that and the skill frontmatter.
 
+## Rules
+
+`rules/coding-standards.md` is the only place the coding rules are edited.
+`make sync-rules` generates the copies each tool reads:
+
+- `skills/coding-standards/SKILL.md` (Claude Code, Codex, Copilot)
+- `GEMINI.md` (Gemini CLI, always loaded)
+
+`make validate` fails if a copy is out of date.
+
+Skills are chosen by their description, so they load when relevant. Gemini's
+`GEMINI.md` is always loaded. Copilot's rules folder (`com.github.copilot/rules/`)
+is not generated yet; its file format is unverified.
+
 ## Adding a skill
 
 Create `skills/<kebab-case-name>/SKILL.md` with `name` (same as the folder) and
