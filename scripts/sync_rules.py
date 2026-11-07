@@ -1,7 +1,7 @@
 """Generate the tool-specific copies of rules/coding-standards.md.
 
 The rules file is the single source. The skill (read by Claude Code, Codex and
-GitHub Copilot) and GEMINI.md (always loaded by Gemini CLI) are generated from
+GitHub Copilot) and rules/AGENTS.md (read by Antigravity) are generated from
 it, so the copies cannot drift. Run with --check to fail on drift.
 """
 
@@ -11,21 +11,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "rules" / "coding-standards.md"
 SKILL = ROOT / "skills" / "coding-standards" / "SKILL.md"
-GEMINI = ROOT / "GEMINI.md"
+ANTIGRAVITY_RULES = ROOT / "rules" / "AGENTS.md"
 
 SKILL_HEADER = """---
 name: coding-standards
 description: Coding standards for every change: latest stable versions, structure, style, tests, docs and index pages, and git rules. Use whenever writing, changing or reviewing code or docs.
+verified: 2026-11-07
 ---
 
 """
 
-GEMINI_HEADER = """# Developer plugin
-
-Apply the rules below to every code or docs change. Skills in `skills/` hold
-task-specific steps; read a skill's `SKILL.md` before following it.
-
-"""
 
 
 def body() -> str:
@@ -37,7 +32,10 @@ def body() -> str:
 def expected() -> dict[Path, str]:
     """Return the generated content for each target file."""
     rules = body()
-    return {SKILL: SKILL_HEADER + rules, GEMINI: GEMINI_HEADER + rules}
+    return {
+        SKILL: SKILL_HEADER + rules,
+        ANTIGRAVITY_RULES: "# Developer plugin rules\n\n" + rules,
+    }
 
 
 def main(argv: list[str]) -> int:

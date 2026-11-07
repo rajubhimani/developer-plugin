@@ -1,71 +1,94 @@
-# Install developer-plugin into Claude Code, Codex, Gemini CLI and/or GitHub Copilot.
+# developer-plugin: developer commands for macOS and Linux.
+# Windows: run the same steps with python directly, e.g. `python scripts/check.py`
+# and `python scripts/install.py claude`. See README.md.
 #
-#   make help              show targets
-#   make install-claude    install for Claude Code
-#   make install-codex     install for Codex
-#   make install-gemini    link into Gemini CLI
-#   make install-copilot   print Copilot steps (no CLI install command verified)
-#   make install-all       run every installer; tools that are missing are skipped
-#   make uninstall-claude  remove the Claude Code install
-#   make validate          check manifests and skills
+#   make help                     show targets
+#   make check                    validate and test (same as python scripts/check.py)
+#   make install-claude           install for Claude Code (REF=vX.Y.Z for a tagged version)
+#   make install-codex            install for Codex
+#   make install-antigravity      copy into Antigravity's plugin folder
+#   make install-copilot          install into Copilot CLI from the git remote
+#   make install-all              every installer; missing clients are skipped
+#   make uninstall-claude         remove the Claude Code install and its copy
+#   make uninstall-codex          remove the Codex install and its copy
+#   make uninstall-antigravity    remove the Antigravity copy
+#   make release LEVEL=minor      bump the version and close the changelog section
+#   make releases                 list released versions (git tags)
+#   make navigator PROJECTS=...   rewrite the projects docs
+#   make workspace PROJECTS=...   create or refresh project docs
+#   make init-project REPO=... LANG=...
+#   make versions                 print the current stable release of common tools
 
-ROOT     := $(abspath .)
-STAGE    := $(ROOT)/build/codex-marketplace
+PY       := python3
 PLUGIN   := developer-plugin
-MKT_NAME := developer-plugin-local
+REF_ARG   = $(if $(REF),--ref $(REF),)
+PROJECTS ?=
 
 .DEFAULT_GOAL := help
-.PHONY: help validate sync-rules install-claude uninstall-claude install-codex install-gemini install-copilot install-all
+.PHONY: help test check validate sync-rules release releases install-claude uninstall-claude \
+	install-codex uninstall-codex install-antigravity uninstall-antigravity install-copilot \
+	install-all update-clis navigator workspace versions init-project
 
 help: ## Show available targets
-	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-20s %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-22s %s\n", $$1, $$2}'
 
 validate: ## Check manifests, skills and generated rule copies
-	@python3 scripts/validate.py
-	@python3 scripts/sync_rules.py --check
+	@$(PY) scripts/validate.py
+	@$(PY) scripts/sync_rules.py --check
 
-sync-rules: ## Regenerate skill and GEMINI.md from rules/coding-standards.md
-	@python3 scripts/sync_rules.py
+test: ## Run the plugin's tests (manifests, skills, templates, generators)
+	@$(PY) -m unittest discover -s tests -v
 
-install-claude: validate ## Install into Claude Code (user scope)
-	@if command -v claude >/dev/null 2>&1; then \
-	  claude plugin marketplace add "$(ROOT)" || true; \
-	  claude plugin install "$(PLUGIN)@$(MKT_NAME)" && \
-	  echo "claude: installed. Start a new session and run /plugin to confirm."; \
-	else echo "claude: not installed, skipping"; fi
+check: ## Validate and test (the gate before a commit or release)
+	@$(PY) scripts/check.py
 
-uninstall-claude: ## Remove the Claude Code install
-	@if command -v claude >/dev/null 2>&1; then \
-	  claude plugin uninstall "$(PLUGIN)@$(MKT_NAME)" || true; \
-	  claude plugin marketplace remove "$(MKT_NAME)" || true; \
-	else echo "claude: not installed, nothing to remove"; fi
+sync-rules: ## Regenerate the skill and rules/AGENTS.md from rules/coding-standards.md
+	@$(PY) scripts/sync_rules.py
 
-install-codex: validate ## Stage a Codex marketplace and register it
-	@if command -v codex >/dev/null 2>&1; then \
-	  rm -rf "$(STAGE)" && mkdir -p "$(STAGE)/plugins/$(PLUGIN)" "$(STAGE)/.agents/plugins" && \
-	  rsync -a --exclude build --exclude .git --exclude scripts "$(ROOT)/" "$(STAGE)/plugins/$(PLUGIN)/" && \
-	  printf '%s\n' '{' '  "name": "$(MKT_NAME)",' '  "plugins": [' '    {' '      "name": "$(PLUGIN)",' '      "source": { "source": "local", "path": "./plugins/$(PLUGIN)" },' '      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },' '      "category": "Developer"' '    }' '  ]' '}' > "$(STAGE)/.agents/plugins/marketplace.json" && \
-	  codex plugin marketplace add "$(STAGE)" && \
-	  echo "codex: marketplace registered. Enable it in .codex/config.toml:" && \
-	  echo '  [plugins."$(PLUGIN)@$(MKT_NAME)"]' && echo '  enabled = true'; \
-	else echo "codex: not installed, skipping"; fi
+release: validate test ## Bump the version: make release LEVEL=patch|minor|major
+	@$(PY) scripts/release.py bump $(LEVEL)
 
-install-gemini: validate ## Link this folder into Gemini CLI
-	@if command -v gemini >/dev/null 2>&1; then \
-	  gemini extensions link "$(ROOT)" && echo "gemini: linked. Restart the CLI session."; \
-	else echo "gemini: not installed, skipping"; fi
+releases: ## List released versions (git tags)
+	@git tag -l 'v*' --sort=-v:refname
 
-install-copilot: validate ## Print GitHub Copilot install steps
-	@echo "GitHub Copilot (VS Code):"
-	@echo "  1. Enable the setting chat.plugins.enabled"
-	@echo "  2. Run 'Chat: Install Plugin from Source' and choose: $(ROOT)"
-	@echo "  3. Start a fresh Copilot chat session to load it."
-	@echo "GitHub Copilot CLI: inside a session run  /plugin install $(ROOT)"
+install-claude: validate ## Install into Claude Code from its own copy (REF=vX.Y.Z optional)
+	@$(PY) scripts/install.py claude $(REF_ARG)
 
-install-all: ## Run every installer; skip tools that are missing
-	@failed=0; \
-	  for t in install-claude install-codex install-gemini; do \
-	    $(MAKE) --no-print-directory $$t || failed=1; \
-	  done; \
-	  $(MAKE) --no-print-directory install-copilot; \
-	  exit $$failed
+uninstall-claude: ## Remove the Claude Code install and its copy
+	@$(PY) scripts/install.py uninstall claude
+
+install-codex: validate ## Install into Codex from its own copy (REF=vX.Y.Z optional)
+	@$(PY) scripts/install.py codex $(REF_ARG)
+
+uninstall-codex: ## Remove the Codex install and its copy
+	@$(PY) scripts/install.py uninstall codex
+
+install-antigravity: validate ## Copy into Antigravity's plugin folder (REF=vX.Y.Z optional)
+	@$(PY) scripts/install.py antigravity $(REF_ARG)
+
+uninstall-antigravity: ## Remove the Antigravity copy
+	@$(PY) scripts/install.py uninstall antigravity
+
+install-copilot: validate ## Install into Copilot CLI from the git remote
+	@$(PY) scripts/install.py copilot
+
+install-all: validate ## Run every installer; missing clients are skipped
+	@$(PY) scripts/install.py all $(REF_ARG)
+
+update-clis: ## Upgrade the npm-installed Codex CLI to latest
+	@$(PY) scripts/install.py update-clis
+
+navigator: ## Rewrite the docs for PROJECTS (set PROJECTS=<folder>)
+	@test -n "$(PROJECTS)" || { echo "set PROJECTS=<folder that holds your repos>"; exit 1; }
+	@$(PY) scripts/init_workspace.py "$(PROJECTS)"
+
+workspace: ## Create or refresh project docs for PROJECTS (umbrella or single repo)
+	@test -n "$(PROJECTS)" || { echo "set PROJECTS=<folder that holds your repos>"; exit 1; }
+	@$(PY) scripts/init_workspace.py "$(PROJECTS)"
+
+versions: ## Print the current stable release of common tools (live lookup)
+	@$(PY) scripts/check_versions.py
+
+init-project: ## Copy standard files into REPO (LANG=python|go|rust|node|c|cpp|java)
+	@test -n "$(REPO)" -a -n "$(LANG)" || { echo "usage: make init-project REPO=<folder> LANG=<language>"; exit 1; }
+	@$(PY) scripts/init_project.py "$(REPO)" "$(LANG)"

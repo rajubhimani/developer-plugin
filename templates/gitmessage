@@ -1,0 +1,7 @@
+# type(scope): short imperative summary (about 50 characters, no full stop)
+#
+# Types: feat fix docs refactor test chore ci build
+# Body (optional): explain WHY, wrapped at 72 columns.
+# Footers (optional): Refs: REQ-NNN, task-id   |   BREAKING CHANGE: what breaks
+#
+# Lines starting with # are removed by git.

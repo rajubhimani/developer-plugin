@@ -1,3 +1,27 @@
+# Build output and dependencies
 build/
-.DS_Store
+dist/
+bin/
+target/
+node_modules/
+*.tar.gz
+release-notes.md
+
+# Python caches and environments
 __pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local secrets and environment
+.env
+.env.*
+!.env.example
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

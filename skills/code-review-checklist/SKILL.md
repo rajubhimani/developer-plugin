@@ -1,6 +1,7 @@
 ---
 name: code-review-checklist
 description: Review a code change for correctness, tests, security and clarity using a fixed checklist. Use when asked to review a diff, branch or pull request.
+verified: 2026-11-07
 ---
 
 # Code review checklist

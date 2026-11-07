@@ -1,0 +1,36 @@
+name: release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Check everything
+        run: make check
+      - name: Check the tag matches the manifests and changelog
+        run: python3 scripts/release.py verify "${GITHUB_REF_NAME#v}"
+      - name: Write release notes and archive
+        run: |
+          python3 scripts/release.py notes "${GITHUB_REF_NAME#v}" > release-notes.md
+          git archive --format=tar.gz --prefix="developer-plugin-${GITHUB_REF_NAME}/" \
+            -o "developer-plugin-${GITHUB_REF_NAME}.tar.gz" "$GITHUB_REF_NAME"
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "developer-plugin-${GITHUB_REF_NAME}.tar.gz" \
+            --title "$GITHUB_REF_NAME" --notes-file release-notes.md

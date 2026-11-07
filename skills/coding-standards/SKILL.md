@@ -1,6 +1,7 @@
 ---
 name: coding-standards
 description: Coding standards for every change: latest stable versions, structure, style, tests, docs and index pages, and git rules. Use whenever writing, changing or reviewing code or docs.
+verified: 2026-11-07
 ---
 
 These rules apply to every task that writes or changes code.
@@ -12,7 +13,7 @@ These rules apply to every task that writes or changes code.
    versions or APIs.
 2. Use the latest stable release. Pin exact versions in the lock file. In
    manifests, allow compatible updates only: patch and minor, never a new
-   major (caret ranges such as `^1.4.2` in npm, or `>=1.4.2,<2` in Python).
+   major (caret ranges such as `^X.Y.Z` in npm, or `>=X.Y,<X+1` in Python).
    Upgrade deliberately (for example `uv lock --upgrade`, `npm outdated`) and
    re-run the checks after each upgrade.
 3. Do not use pre-release, beta or deprecated APIs unless the user asks.

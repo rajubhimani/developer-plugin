@@ -1,0 +1,44 @@
+# Local development stack (Compose Specification; no version key needed).
+#   cp .env.example .env   then   docker compose up --build --wait
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      db:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /src
+        - action: rebuild
+          path: ./package-manifest-file
+
+  db:
+    # Tag must be set in .env; the stack refuses to start without it.
+    image: ${DB_IMAGE:?set DB_IMAGE in .env to a pinned tag}
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  adminer:
+    image: ${ADMINER_IMAGE:-adminer}
+    profiles: ["tools"]
+    ports:
+      - "127.0.0.1:8081:8080"
+
+volumes:
+  db-data:

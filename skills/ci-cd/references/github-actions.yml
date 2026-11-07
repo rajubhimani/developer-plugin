@@ -1,0 +1,60 @@
+# Starting template for GitHub Actions. Replace the bracketed placeholders.
+# Pin each third-party action to a full commit SHA; keep the version in a comment.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read          # default for every job; widen per job below
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@<full-sha>   # v<version>
+        with:
+          persist-credentials: false
+      - name: Set up toolchain
+        run: <install the pinned toolchain from its lock or version file>
+      - name: Lint and type-check
+        run: <lint and type-check commands for the language>
+      - name: Test
+        run: <test command>
+
+  build:
+    needs: check
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@<full-sha>   # v<version>
+        with:
+          persist-credentials: false
+      - name: Build artifact
+        run: <build command>
+      - uses: actions/upload-artifact@<full-sha>   # v<version>
+        with:
+          name: app
+          path: <artifact path>
+
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write     # only this job may request a cloud OIDC token
+    steps:
+      - uses: actions/download-artifact@<full-sha>   # v<version>
+        with:
+          name: app
+      - name: Deploy with OIDC credentials
+        run: <deploy command using the short-lived OIDC credential>
