@@ -1,0 +1,11 @@
+{
+  "name": "developer-plugin-local",
+  "owner": { "name": "local" },
+  "plugins": [
+    {
+      "name": "developer-plugin",
+      "source": "./",
+      "description": "Shared skills for Claude Code, Codex, Gemini CLI and GitHub Copilot."
+    }
+  ]
+}
