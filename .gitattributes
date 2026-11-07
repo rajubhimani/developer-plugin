@@ -1,0 +1,10 @@
+# Normalise text files to LF in the repository.
+* text=auto eol=lf
+
+# Binary files: never diff or convert them.
+*.png binary
+*.jpg binary
+*.gif binary
+*.pdf binary
+*.zip binary
+*.gz binary

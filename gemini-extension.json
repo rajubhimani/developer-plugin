@@ -1,6 +1,0 @@
-{
-  "name": "developer-plugin",
-  "version": "0.1.0",
-  "description": "One plugin with shared skills for Claude Code, Codex, Gemini CLI and GitHub Copilot.",
-  "contextFileName": "GEMINI.md"
-}

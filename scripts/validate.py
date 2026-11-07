@@ -1,12 +1,14 @@
 """Check that the plugin manifests agree and every skill has valid frontmatter."""
 
+import datetime as dt
 import json
 import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-MANIFESTS = [ROOT / "plugin.json", ROOT / ".claude-plugin" / "plugin.json", ROOT / "gemini-extension.json"]
+MANIFESTS = [ROOT / "plugin.json", ROOT / ".claude-plugin" / "plugin.json"]
+MAX_AGE_DAYS = 90
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 
@@ -50,6 +52,30 @@ def main() -> int:
             problems.append(f"{folder}: name must be kebab-case")
         if not fields.get("description"):
             problems.append(f"{folder}: description missing")
+        checked = fields.get("verified", "")
+        try:
+            age = (dt.date.today() - dt.date.fromisoformat(checked)).days
+        except ValueError:
+            problems.append(f"{folder}: 'verified' date missing or not YYYY-MM-DD")
+        else:
+            if age > MAX_AGE_DAYS:
+                problems.append(f"{folder}: last verified {age} days ago; re-check against current docs")
+
+    version_re = re.compile(r"(?<![\w.])\d+\.\d+(\.\d+)?(?![\w.])|\b(?:C|C\+\+)\d{2}\b|\bJDK ?\d+|\bJava \d+|\bPython 3\.\d+|\bNode\.?js? \d+|\bGo 1\.\d+")
+    allowed = ("Agent Plugins 1.0",)  # a published specification's name, not a tool version
+    doc_files = [ROOT / "README.md"] + sorted((ROOT / "docs").glob("*.md"))
+    for doc in doc_files:
+        for number, line in enumerate(doc.read_text(encoding="utf-8").splitlines(), 1):
+            if any(a in line for a in allowed):
+                continue
+            if version_re.search(line):
+                problems.append(f"{doc.relative_to(ROOT)}:{number}: hard-coded version or standard; say 'current' and look it up")
+    for skill in sorted((ROOT / "skills").glob("*/SKILL.md")):
+        full = skill.read_text(encoding="utf-8")
+        body = "\n".join(line for line in full.splitlines() if not line.startswith("verified:"))
+        for number, line in enumerate(body.splitlines(), 1):
+            if version_re.search(line):
+                problems.append(f"{skill.parent.name}:{number}: hard-coded version number; look it up instead")
 
     for p in problems:
         print("FAIL", p)

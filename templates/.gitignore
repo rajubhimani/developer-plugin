@@ -1,0 +1,22 @@
+# Local secrets and environment
+.env
+.env.*
+!.env.example
+
+# OS and editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Build output and caches (keep the ones your language needs committed)
+build/
+dist/
+bin/
+coverage/
+*.log
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+target/

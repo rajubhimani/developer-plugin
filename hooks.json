@@ -1,0 +1,10 @@
+{
+  "developer-plugin-workspace": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "python3 \"$HOME/.gemini/config/plugins/developer-plugin/scripts/init_workspace.py\" \"$PWD\" --quiet"
+      }
+    ]
+  }
+}
