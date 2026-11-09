@@ -28,43 +28,50 @@ These rules apply to every task that writes or changes code.
 6. Configuration is explicit. Every setting is a typed, checked field of one
    settings object. Read the environment in one place only. No magic numbers
    inside functions.
+7. Use an existing, well-tested library function instead of writing your own
+   (for example `np.mean`, a tensor padding helper, a date parser). Search the
+   libraries the project already depends on first. Write your own only with a
+   reason you can state in a comment, such as a bug, a licence, or a
+   deprecated call the library still makes. Guard against empty input before
+   calling a function that reduces a collection (mean, max).
 
 ## Style
 
-7. Give every public function, class and module type hints and a docstring.
+8. Give every public function, class and module type hints and a docstring.
    Docstrings say why, not what the code already shows.
-8. Prefer dataclasses, Protocols and enums over loose dicts and tuples.
-   Keep functions small.
-9. Do not use `eval`, `exec`, bare `except:`, silent `except`, or mutable
+9. Prefer dataclasses, Protocols and enums over loose dicts and tuples.
+   Define a fixed set of values once, as an enum; never as a type of string
+   literals plus a second list of the same values. Keep functions small.
+10. Do not use `eval`, `exec`, bare `except:`, silent `except`, or mutable
    default arguments.
-10. Comments explain a decision or a trap, not the next line.
+11. Comments explain a decision or a trap, not the next line.
 
 ## Tests and checks
 
-11. Deterministic logic gets tests. A bug fix adds a test that would have
+12. Deterministic logic gets tests. A bug fix adds a test that would have
     caught it.
-12. Run the project's single check command (lint, format, types, tests)
+13. Run the project's single check command (lint, format, types, tests)
     before reporting work done. Warnings count as failures. Say so plainly if
     a check could not run.
 
 ## Honesty
 
-13. Mark data nobody has checked as DRAFT. State what a result does not show.
-14. Never claim a test passed, or a step worked, without running it.
+14. Mark data nobody has checked as DRAFT. State what a result does not show.
+15. Never claim a test passed, or a step worked, without running it.
 
 ## Documentation
 
-15. Every module has a short doc page: what it does, its public API, and how
+16. Every module has a short doc page: what it does, its public API, and how
     to use it. Keep the doc next to the code or in `docs/`.
-16. Every folder that holds code or docs has an index (`README.md`) listing
+17. Every folder that holds code or docs has an index (`README.md`) listing
     its contents with one line each and a link. Update the index in the same
     change that adds or removes a file.
-17. Wrap Markdown at 80 columns.
+18. Wrap Markdown at 80 columns.
 
 ## Git
 
-18. Commit or push only when the user asks.
-19. Commit messages, pull requests, code and docs carry no AI or tool
+19. Commit or push only when the user asks.
+20. Commit messages, pull requests, code and docs carry no AI or tool
     attribution. The user is the only author.
-20. Never rewrite pushed history without the user's explicit approval for
+21. Never rewrite pushed history without the user's explicit approval for
     that push.

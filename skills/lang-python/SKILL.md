@@ -27,6 +27,47 @@ Look these up when you start, never from memory:
   importing the working copy instead of the installed package.
 - One module, one job. Public functions have type hints and docstrings.
 
+## Reuse before writing
+
+- Check numpy, pandas, the standard library and the framework in use before
+  writing a numeric, array or text helper. `np.mean`, `np.pad`,
+  `torch.nn.utils.rnn.pad_sequence` and `collections.Counter` are tested and
+  fast; a loop or a one-line `sum(x) / len(x)` is slower and untested.
+- Reducing an empty collection (mean, max, argmax) is a bug. Check the length
+  first and fail clearly. A library may return `nan` and a warning, which is
+  better than a silent wrong value, but the check belongs in the caller.
+- Keep your own version only with a stated reason in a comment, for example a
+  library that calls a deprecated function when warnings are errors.
+
+## Fixed sets of values
+
+- Use a `StrEnum` for any fixed set of string values (statuses, modes, kinds).
+  Do not write a `Literal[...]` type and a tuple of the same words: the two
+  drift apart. Derive any list from the enum (`tuple(Status)`), never retype it.
+- A `StrEnum` member is still a string. It equals plain text, and `json.dumps`
+  and CSV write it as plain text, so saved files do not change.
+- A member's default `repr` is noisy (`<Status.OPEN: 'open'>`) in logs and
+  dataclass reprs. Give the project one small base class with
+  `__repr__ = str.__repr__` and subclass it, so these print `'open'`.
+- Test membership with `value in Status` (a plain string works on current
+  Python; older releases raised an error). Join the values for an error message
+  with `", ".join(Status)`, not the tuple's repr.
+- Keep `Literal` where a library already validates the value, such as a
+  settings field read from the environment. An enum adds nothing there.
+- Data loaded from JSON holds plain strings, not members. Convert on load
+  (`Status(text)`) so the annotation is true and a bad value fails at load
+  time, not later.
+- When you move a set of values into an enum, search for every old string
+  literal (`== "open"`) and replace it. Equal strings hide a half-finished
+  migration until someone renames a member.
+- Derive a subset of an enum from it; do not retype members. If a member's
+  position matters (an index, a stored number), say so in a comment, since
+  reordering members then changes what the stored data means.
+- Move the comment that described the old constant into the enum's docstring,
+  or it is left describing nothing.
+- Parameters typed `list[Status]` reject a `list[str]` and the reverse, because
+  `list` is invariant. Take a `Sequence[Status]` when a caller may pass either.
+
 ## Quality gates (run all, in this order)
 
 1. `uv run ruff format --check .` and `uv run ruff check .`
