@@ -4,6 +4,20 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+- Coding standards, the Python skill and the review checklist now say to use an
+  existing library function instead of a hand-written helper, to keep your own
+  only with a stated reason, and to check for empty input before a mean or
+  other reduction.
+
+- Code review checklist now covers refactors: find every use of what was
+  replaced, check loaded data matches its types, run the real entry points, and
+  run the formatter check after editor edits.
+
+- Coding standards and the Python skill now say to define a fixed set of values
+  once, as a `StrEnum`, not as a `Literal` type plus a matching tuple. The
+  Python skill covers repr, JSON, loading, membership tests, finishing a
+  migration and when `Literal` is fine.
+
 ## [0.1.0] - 2026-11-07
 
 - Added git-workflow, versioning-release and code-comments skills, based on Conventional
