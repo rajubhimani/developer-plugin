@@ -43,3 +43,9 @@ Check each tool's docs for its current version before adopting it.
 
 - One README per repo or package with what it is, how to build, how to test.
 - Renovate or Dependabot for dependency updates, grouped so PRs stay reviewable.
+
+## Setting one up
+
+`project-structure` creates and checks the layout: a Python workspace, a TypeScript
+workspace or a Rust workspace with apps, packages and written dependency rules. Use it
+after you decide on a monorepo.

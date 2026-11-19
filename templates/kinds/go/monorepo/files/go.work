@@ -1,0 +1,8 @@
+// Workspace: lists the modules that are developed together. Each member keeps its own
+// go.mod, so it can be versioned and released on its own. Do not commit replace
+// directives in members; this file makes sibling modules resolve locally.
+// Set the language version with: go work edit -go=<current-go-version>
+
+use (
+{{go_use}}
+)

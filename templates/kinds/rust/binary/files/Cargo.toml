@@ -1,0 +1,18 @@
+[package]
+name = "{{name}}"
+version = "0.1.0"
+edition = "<edition>"
+description = "<one line: what this program does>"
+license = "<spdx-license-id>"
+repository = "<repository-url>"
+readme = "README.md"
+
+# The package has a library (src/lib.rs, imported as `{{package}}`) and a binary
+# (src/main.rs). Cargo finds both from the file names.
+[dependencies]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }

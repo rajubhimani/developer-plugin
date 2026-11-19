@@ -1,0 +1,17 @@
+{
+  "title": "Command line tool",
+  "summary": "A program people run in a terminal.",
+  "use_when": "The product is a command, not a server or an importable library.",
+  "standalone": true,
+  "required": [
+    "go.mod",
+    "cmd/{{name}}/main.go",
+    "internal/cli/cli.go",
+    "README.md"
+  ],
+  "adopt_safe": [],
+  "skip_common": [
+    "compose.yaml"
+  ],
+  "makefile": "go.mk"
+}

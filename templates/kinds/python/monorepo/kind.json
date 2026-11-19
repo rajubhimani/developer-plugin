@@ -1,0 +1,47 @@
+{
+  "title": "Monorepo (uv workspace)",
+  "summary": "Several apps and packages in one repository, one lock file.",
+  "use_when": "Apps and libraries change together and share code, and you want one CI and one set of standards.",
+  "standalone": true,
+  "required": [
+    "pyproject.toml",
+    "README.md",
+    "docs/architecture.md",
+    ".github/CODEOWNERS"
+  ],
+  "adopt_safe": [
+    "docs/architecture.md",
+    ".github/CODEOWNERS"
+  ],
+  "skip_common": [
+    "Dockerfile",
+    "compose.yaml",
+    ".dockerignore"
+  ],
+  "makefile": "python-monorepo.mk",
+  "member_dirs": {
+    "webapp": "apps",
+    "cli": "apps",
+    "library": "packages"
+  },
+  "default_members": [
+    {
+      "name": "api",
+      "kind": "webapp"
+    },
+    {
+      "name": "core",
+      "kind": "library"
+    },
+    {
+      "name": "utils",
+      "kind": "library"
+    }
+  ],
+  "shared": [
+    {
+      "from": "scripts/check_env.py",
+      "to": "scripts/check_env.py"
+    }
+  ]
+}

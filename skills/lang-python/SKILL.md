@@ -39,6 +39,33 @@ Look these up when you start, never from memory:
 - Keep your own version only with a stated reason in a comment, for example a
   library that calls a deprecated function when warnings are errors.
 
+## Call by name
+
+- Pass arguments to your own functions and classes by keyword, one per line
+  when the call is long:
+  ```python
+  Token(
+      id=int(cols[0]),
+      form=cols[1],
+      head=int(cols[6]),
+  )
+  ```
+  A reader sees what each value is without opening the definition, and
+  reordering or inserting a parameter cannot silently swap two values of the
+  same type (`head` and `id` are both `int`).
+- Exceptions: a call with one obvious argument (`len(xs)`, `Path(p)`), and
+  library functions that only accept positional arguments (many builtins and
+  numpy functions), callbacks typed `Callable[[A, B], R]`, which have no
+  parameter names, and the `*args` part of a variadic call. Do not rewrite
+  those.
+- When changing existing code, match calls to definitions by what they resolve
+  to, not by name: `pad`, `encode` and `load` also exist in libraries. Run the
+  type checker afterwards, since a wrong keyword fails there.
+- In a definition, put `*` before parameters that callers should always name.
+  A call that leaves one out then fails at once instead of working by accident.
+- ruff has no rule for keyword calls in general (`FBT` covers booleans only),
+  so check this in review.
+
 ## Fixed sets of values
 
 - Use a `StrEnum` for any fixed set of string values (statuses, modes, kinds).
@@ -67,6 +94,33 @@ Look these up when you start, never from memory:
   or it is left describing nothing.
 - Parameters typed `list[Status]` reject a `list[str]` and the reverse, because
   `list` is invariant. Take a `Sequence[Status]` when a caller may pass either.
+
+## Containers, Compose and Kubernetes
+
+Most Python services run in a container, locally under Compose and in a cluster
+under Kubernetes. Keep these three the same app with different configuration.
+
+- **One `Settings` class** (template: `references/settings.py`, built on
+  pydantic-settings) reads typed values from the environment, with `.env` only
+  as a local fallback. Credentials are `SecretStr`, a missing required value stops
+  start-up with its name, and a mounted secrets directory is supported.
+  `make check-env` fails when the fields, `.env.example` and the cluster config
+  disagree. `.env` is git-ignored and docker-ignored; `.env.example` is
+  the committed list of names. Compose passes `.env` in; Kubernetes supplies the
+  same names from a ConfigMap and a Secret (see `kubernetes`, `secrets-and-config`).
+- **Multi-stage Dockerfile with uv:** dependencies from `pyproject.toml` and
+  `uv.lock` only, in their own cached layer (`--no-install-project`), then the
+  source, then a non-editable install. BuildKit cache mounts keep downloads between
+  builds. Run as a numeric non-root user with an exec-form `CMD`.
+- **One server process per container;** scale with replicas. Handle SIGTERM, expose
+  liveness and readiness routes, log to standard output.
+- `make init-project` copies these into a new project (never over an existing file):
+  `references/Dockerfile.python`, `references/compose.python.yaml`,
+  `references/env.example`, `references/dockerignore.python` and
+  `references/settings.py`, plus `scripts/check_env.py`. The full guide, the
+  layer and cache rules and the pre-ship checks are in `references/containers.md`.
+- Idioms for errors, async, typing, logging, testing and security:
+  `references/idioms.md`.
 
 ## Quality gates (run all, in this order)
 

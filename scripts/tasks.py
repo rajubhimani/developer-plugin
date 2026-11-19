@@ -120,8 +120,8 @@ def new_task(root: Path, feature: str, title: str, reqs: list[str]) -> Path:
     """Create a task in backlog/ with its first log line."""
     if not re.fullmatch(r"[a-z0-9-]+", feature):
         raise SystemExit("feature must be lowercase letters, digits and hyphens")
-    ensure_feature(root, feature, reqs)
-    task_id = f"{feature}-{next_number(root, feature)}"
+    ensure_feature(root=root, feature=feature, reqs=reqs)
+    task_id = f"{feature}-{next_number(root=root, feature=feature)}"
     folder = root / "docs" / "tasks" / "backlog"
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / f"{task_id}-{slugify(title)}.md"
@@ -151,7 +151,7 @@ def move_task(root: Path, task_id: str, status: str, reason: str) -> Path:
         raise SystemExit(f"status must be one of: {', '.join(STATUSES)}")
     if status == "rejected" and not reason:
         raise SystemExit("rejected tasks need --reason so the decision is recorded")
-    found = find_task(root, task_id)
+    found = find_task(root=root, task_id=task_id)
     if found is None:
         raise SystemExit(f"no task with id {task_id}")
     current, src = found
@@ -168,10 +168,10 @@ def move_task(root: Path, task_id: str, status: str, reason: str) -> Path:
         "rejected": f"rejected: {reason}",
     }
     event = events.get(status, f"moved to {status}")
-    text = set_front(src.read_text(encoding="utf-8"), "status", status)
+    text = set_front(text=src.read_text(encoding="utf-8"), key="status", value=status)
     text = text.rstrip("\n") + f"\n- {utc_now()}  {event}  by {actor()}\n"
     src.write_text(text, encoding="utf-8")
-    if not git_move(root, src, dst):
+    if not git_move(root=root, src=src, dst=dst):
         shutil.move(str(src), str(dst))
         if shutil.which("git") is None:
             print("note: git is not installed, so this move is not in git history. "
@@ -311,20 +311,20 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     root = args.root.resolve()
     if args.command == "new":
-        path = new_task(root, args.feature, args.title, args.req)
+        path = new_task(root=root, feature=args.feature, title=args.title, reqs=args.req)
         print(f"created {path.relative_to(root)}")
     elif args.command == "move":
-        path = move_task(root, args.task_id, args.status, args.reason)
+        path = move_task(root=root, task_id=args.task_id, status=args.status, reason=args.reason)
         sync_decisions(root)
         print(f"moved {args.task_id} to {args.status}: {path.relative_to(root)}")
     elif args.command == "decide":
-        decide(root, args.text)
+        decide(root=root, text=args.text)
         print("recorded decision in docs/decisions/log.md")
     elif args.command == "sync":
         sync_decisions(root)
         print("standing decisions refreshed in AGENTS.md")
     else:
-        list_tasks(root, args.times)
+        list_tasks(root=root, show_times=args.times)
     return 0
 
 

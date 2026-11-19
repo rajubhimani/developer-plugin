@@ -4,7 +4,9 @@
 #
 #   make help                     show targets
 #   make check                    validate and test (same as python scripts/check.py)
-#   make install-claude           install for Claude Code (REF=vX.Y.Z for a tagged version)
+#   make install-claude           install for Claude Code (REF=vX.Y.Z for a tagged version,
+#                                 DRY=1 to preview, CONFIRM=1 to allow a downgrade or major step)
+#   make check-install            report installed copies that drifted from this checkout
 #   make install-codex            install for Codex
 #   make install-antigravity      copy into Antigravity's plugin folder
 #   make install-copilot          install into Copilot CLI from the git remote
@@ -16,18 +18,19 @@
 #   make releases                 list released versions (git tags)
 #   make navigator PROJECTS=...   rewrite the projects docs
 #   make workspace PROJECTS=...   create or refresh project docs
-#   make init-project REPO=... LANG=...
+#   make init-project REPO=... LANG=... [KIND=... NAME=... MEMBERS=a:kind,b:kind MODULE=...]
+#   make structure-check REPO=... check a project's layout against its recorded kind
 #   make versions                 print the current stable release of common tools
 
 PY       := python3
 PLUGIN   := developer-plugin
-REF_ARG   = $(if $(REF),--ref $(REF),)
+REF_ARG   = $(if $(REF),--ref $(REF),) $(if $(DRY),--dry-run,) $(if $(CONFIRM),--confirm-update,)
 PROJECTS ?=
 
 .DEFAULT_GOAL := help
 .PHONY: help test check validate sync-rules release releases install-claude uninstall-claude \
 	install-codex uninstall-codex install-antigravity uninstall-antigravity install-copilot \
-	install-all update-clis navigator workspace versions init-project
+	install-all update-clis check-install navigator workspace versions init-project structure-check
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-22s %s\n", $$1, $$2}'
@@ -75,6 +78,9 @@ install-copilot: validate ## Install into Copilot CLI from the git remote
 install-all: validate ## Run every installer; missing clients are skipped
 	@$(PY) scripts/install.py all $(REF_ARG)
 
+check-install: ## Read-only: report installed copies that drifted from this checkout
+	@$(PY) scripts/install.py check-install
+
 update-clis: ## Upgrade the npm-installed Codex CLI to latest
 	@$(PY) scripts/install.py update-clis
 
@@ -89,6 +95,10 @@ workspace: ## Create or refresh project docs for PROJECTS (umbrella or single re
 versions: ## Print the current stable release of common tools (live lookup)
 	@$(PY) scripts/check_versions.py
 
-init-project: ## Copy standard files into REPO (LANG=python|go|rust|node|c|cpp|java)
-	@test -n "$(REPO)" -a -n "$(LANG)" || { echo "usage: make init-project REPO=<folder> LANG=<language>"; exit 1; }
-	@$(PY) scripts/init_project.py "$(REPO)" "$(LANG)"
+init-project: ## Copy standard files into REPO (LANG=python|go|rust|node|c|cpp|java; KIND=library|webapp|... asks once in a terminal)
+	@test -n "$(REPO)" -a -n "$(LANG)" || { echo "usage: make init-project REPO=<folder> LANG=<language> [KIND=<kind> NAME=<name> MEMBERS=a:kind,b:kind MODULE=<go module>]"; exit 1; }
+	@$(PY) scripts/init_project.py "$(REPO)" "$(LANG)" $(if $(KIND),--kind "$(KIND)",) $(if $(NAME),--name "$(NAME)",) $(if $(MEMBERS),--members "$(MEMBERS)",) $(if $(MODULE),--module "$(MODULE)",)
+
+structure-check: ## Check REPO's layout against its recorded project kind (read-only)
+	@test -n "$(REPO)" || { echo "usage: make structure-check REPO=<folder>"; exit 1; }
+	@$(PY) scripts/check_structure.py "$(REPO)"

@@ -1,30 +1,75 @@
 """Copy the standard project files for one language into a repo, without overwriting.
 
 Usage: python3 scripts/init_project.py <repo folder> <language>
+           [--kind KIND] [--name NAME] [--members name:kind,...] [--module PATH] [--no-input]
 
 Languages: python, go, rust, node, c, cpp, java. Each run reports which files it
-created and which it kept because they already existed. Standard library only.
+created and which it kept because they already existed.
+
+A *kind* says what the project is (library, web app, command line tool, monorepo...)
+and decides the folder layout. In a terminal, a new project is asked once; the answer
+is recorded in .developer-plugin/project.json and never asked again. Without a
+terminal and without --kind, the generic layout is used. In a folder that already
+holds a project the kind is recorded and only safe files are added; code is never
+moved or replaced. Standard library only.
 """
 
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import project_kinds as pk  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES = ROOT / "templates"
 LANGUAGES = ("python", "go", "rust", "node", "c", "cpp", "java")
 SHARED = ("Dockerfile", "compose.yaml", ".dockerignore", ".editorconfig", ".gitignore",
           "AGENTS.md", "CLAUDE.md")
+PYTHON_REFS = ROOT / "skills" / "lang-python" / "references"
+# Python projects get a uv multi-stage image, a Compose stack, a Settings class and the
+# check that its names agree with .env.example and the cluster. They replace the
+# generic Dockerfile, compose.yaml and .dockerignore.
+REPLACEMENTS = {
+    "python": {
+        "Dockerfile": PYTHON_REFS / "Dockerfile.python",
+        "compose.yaml": PYTHON_REFS / "compose.python.yaml",
+        ".dockerignore": PYTHON_REFS / "dockerignore.python",
+    },
+}
+EXTRAS = {
+    "python": [
+        (PYTHON_REFS / "env.example", Path(".env.example")),
+        (PYTHON_REFS / "settings.py", Path("src/app/settings.py")),
+        (ROOT / "scripts" / "check_env.py", Path("scripts/check_env.py")),
+    ],
+}
+HINTS = {
+    "python": ("Python: run `uv add pydantic-settings` for src/app/settings.py, edit the "
+               "<placeholders> in Dockerfile, remove compose services you do not need, and "
+               "keep .env.example, the Settings fields and the cluster config in step "
+               "(make check-env)."),
+}
 
 
-def plan(language: str) -> list[tuple[Path, Path]]:
-    """Return (template, destination name) pairs for one language."""
+def plan(language: str, kind: pk.Kind | None = None) -> list[tuple[Path, Path]]:
+    """Return (template, destination name) pairs for one language.
+
+    With a kind, files the kind does not want (a library has no Dockerfile) are left
+    out and the kind supplies its own container and settings files.
+    """
     pairs = [(TEMPLATES / "makefiles" / f"{language}.mk", Path("Makefile"))]
-    pairs += [(TEMPLATES / name, Path(name)) for name in SHARED]
+    if kind is None:
+        replaced = REPLACEMENTS.get(language, {})
+        pairs += [(replaced.get(name, TEMPLATES / name), Path(name)) for name in SHARED]
+        pairs += EXTRAS.get(language, [])
+    else:
+        pairs += [(TEMPLATES / name, Path(name)) for name in SHARED if name not in kind.skip_common]
     pairs.append((TEMPLATES / "alignment" / "test_alignment.py", Path("tests/alignment/test_alignment.py")))
     pairs.append((TEMPLATES / "docs" / "requirements.md", Path("docs/requirements.md")))
     pairs += [
@@ -37,6 +82,134 @@ def plan(language: str) -> list[tuple[Path, Path]]:
     pairs.append((ROOT / "skills" / "ci-cd" / "references" / "github-actions.yml",
                   Path(".github/workflows/ci.yml")))
     return pairs
+
+
+STRUCTURE_TARGET = """
+structure-check: ## Check the layout matches the project kind (.developer-plugin/project.json)
+\tpython3 scripts/check_structure.py .
+"""
+
+
+def with_structure_check(makefile: str) -> str:
+    """Add a structure-check target and make `check` depend on it."""
+    text = re.sub(r"(?m)^(check:[^#\n]*?)(\s*##.*|\s*)$", lambda m: f"{m.group(1).rstrip()} structure-check{m.group(2)}", makefile, count=1)
+    text = re.sub(r"(?m)^(\.PHONY:.*)$", lambda m: m.group(1) + " structure-check", text, count=1)
+    return text.rstrip("\n") + "\n" + STRUCTURE_TARGET
+
+
+def common_files(language: str, kind: pk.Kind | None) -> dict[str, str]:
+    """Return {destination: text} for the files every project gets."""
+    out: dict[str, str] = {}
+    for source, relative in plan(language, kind):
+        if not source.exists():
+            raise FileNotFoundError(f"missing template: {source.relative_to(ROOT)}")
+        out[relative.as_posix()] = source.read_text(encoding="utf-8")
+    return out
+
+
+def kind_files(language: str, repo: Path, kind: pk.Kind, kinds: dict[str, pk.Kind], name: str,
+               members: list[dict[str, str]], module: str, adopting: bool) -> tuple[dict[str, str], dict[str, object]]:
+    """Return ({destination: text}, profile) for a chosen kind."""
+    package = pk.detect_package(repo, pk.snake(name)) if adopting and language == "python" else pk.snake(name)
+    root_vars = {"name": name, "package": package, "title": pk.title_of(name), "scope": name,
+                 "module": module or f"example.com/{name}", "member_rows": "", "gopkg": name.replace("-", ""),
+                 "workspace_dependencies": "", "source_dirs": "", "go_use": "",
+                 "package_upper": package.upper()}
+    if language == "java":
+        group = module or "com.example"  # --module sets the base package (Maven group)
+        root_vars.update({"javagroup": group, "javapkg": f"{group}.{name.replace('-', '')}",
+                          "javapath": f"{group}.{name.replace('-', '')}".replace(".", "/")})
+    files: dict[str, str] = {}
+    required = pk.resolved_required(kind, root_vars)
+    if language == "node" and kind.name == "monorepo" and members and not any(m["kind"] == "config" for m in members):
+        members = [*members, {"name": "config", "kind": "config"}]  # members extend its tsconfig files
+    member_records: list[dict[str, str]] = []
+    rows = []
+    for member in members:
+        mkind = kinds.get(member["kind"])
+        if mkind is None or mkind.name == kind.name or member["kind"] not in kind.member_dirs:
+            allowed = ", ".join(sorted(kind.member_dirs))
+            raise ValueError(f"member '{member['name']}': kind '{member['kind']}' is not allowed here (use: {allowed})")
+        dist, pkg = pk.names_for(language, name, member["name"])
+        path = pk.member_path(kind, mkind, member["name"])
+        member_vars = {**root_vars, "name": dist, "package": pkg, "title": pk.title_of(member["name"]),
+                       "member": member["name"], "gopkg": member["name"].replace("-", ""), "package_upper": pkg.upper(),
+                       "module": f"{root_vars['module']}/{path}"}
+        only = tuple(pk.fill(p, member_vars) for p in mkind.adopt_safe) if adopting else None
+        for dest, text in pk.render_tree(mkind, member_vars, workspace=True, only=only).items():
+            files[f"{path}/{dest}"] = text
+        for entry in mkind.shared:
+            if entry.get("member"):
+                dest = pk.fill(str(entry["to"]), member_vars)
+                src = (ROOT / str(entry["from"])).read_text(encoding="utf-8")
+                files[f"{path}/{dest}"] = src.replace("<package>", pkg)
+        required += [f"{path}/{pk.fill(r, member_vars)}" for r in mkind.required
+                     if r not in mkind.skip_common and not r.startswith(".github/")]
+        member_records.append({"name": member["name"], "kind": member["kind"], "path": path,
+                               "dist": dist, "package": pkg, "module": member_vars["module"]})
+        rows.append(f"| {member['name']} | {member['kind']} | <what {member['name']} is for> |")
+    root_vars["member_rows"] = "\n".join(rows)
+    root_vars["source_dirs"] = ", ".join(f'"{m["path"]}/src"' for m in member_records)
+    root_vars["go_use"] = "\n".join(f"\t./{m['path']}" for m in member_records)
+    root_vars["workspace_dependencies"] = "\n".join(
+        f'{m["dist"]} = {{ path = "{m["path"]}" }}' for m in member_records if m["kind"] == "library")
+    only_root = tuple(pk.fill(p, root_vars) for p in kind.adopt_safe) if adopting else None
+    files.update(pk.render_tree(kind, root_vars, workspace=False, only=only_root))
+    files.update(pk.shared_files(kind, root_vars, adopting))
+    if adopting:
+        # Never create a folder under src/ that the project does not have: it would sit
+        # beside the real code (a flat layout, or a package with another name).
+        files = {dest: text for dest, text in files.items()
+                 if not dest.startswith("src/") or (repo / dest).parent.is_dir()}
+    if kind.makefile:
+        files["Makefile"] = with_structure_check(
+            pk.fill((TEMPLATES / "makefiles" / kind.makefile).read_text(encoding="utf-8"), root_vars))
+    files["scripts/check_structure.py"] = (ROOT / "scripts" / "check_structure.py").read_text(encoding="utf-8")
+    profile: dict[str, object] = {
+        "version": 1, "language": language, "kind": kind.name, "name": name, "package": package,
+        "members": member_records, "required": required, "adopted": adopting,
+    }
+    if language == "go":
+        profile["module"] = root_vars["module"]
+    return files, profile
+
+
+def write_new(repo: Path, files: dict[str, str]) -> None:
+    """Create files that do not exist yet; report what was created and kept."""
+    for relative, text in files.items():
+        target = repo / relative
+        if target.exists():
+            print(f"kept    {relative} (already exists)")
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8")
+        print(f"created {relative}")
+
+
+def choose(args: argparse.Namespace, repo: Path, kinds: dict[str, pk.Kind],
+           profile: dict[str, object] | None) -> dict[str, object] | None:
+    """Work out the kind, name and members: flags, then the record, then (in a terminal) ask."""
+    if profile and not args.kind:
+        return {"kind": profile["kind"], "name": profile["name"],
+                "members": [{"name": m["name"], "kind": m["kind"]} for m in profile.get("members", [])],  # type: ignore[union-attr]
+                "module": profile.get("module", "")}
+    default_name = re.sub(r"[^a-z0-9]+", "-", repo.name.lower()).strip("-") or "app"
+    if args.kind:
+        kind = kinds.get(args.kind)
+        if kind is None or not kind.standalone:
+            raise ValueError(f"unknown kind '{args.kind}' for {args.language}; use one of: "
+                             + ", ".join(k for k, v in kinds.items() if v.standalone))
+        members = pk.parse_members(args.members) if args.members else [dict(m) for m in kind.default_members]
+        return {"kind": args.kind, "name": args.name or default_name, "members": members, "module": args.module or ""}
+    if not kinds:
+        return None
+    interactive = sys.stdin.isatty() and sys.stdout.isatty() and not args.no_input
+    if interactive:
+        answer = pk.intake(args.language, repo.name, input, print)
+        if answer:
+            answer["module"] = args.module or ""
+            return answer
+    return None
 
 
 GIT_MISSING = ("git is not installed. Install it, then run `git init` in the repo:\n"
@@ -87,26 +260,69 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("repo", type=Path)
     parser.add_argument("language", choices=LANGUAGES)
+    parser.add_argument("--kind", help="what the project is (library, webapp, cli, monorepo ...)")
+    parser.add_argument("--name", help="project name, lower-case words joined by hyphens")
+    parser.add_argument("--members", help="monorepo members as name:kind,name:kind")
+    parser.add_argument("--module", help="Go module path, such as github.com/you/project")
+    parser.add_argument("--no-input", action="store_true", help="never ask questions")
     args = parser.parse_args(argv)
     repo = args.repo.expanduser().resolve()
     if not repo.is_dir():
         print(f"not a folder: {repo}", file=sys.stderr)
         return 1
-    for source, relative in plan(args.language):
-        if not source.exists():
-            print(f"missing template: {source.relative_to(ROOT)}", file=sys.stderr)
+    kinds = pk.load_kinds(args.language)
+    profile = pk.read_profile(repo)
+    if profile and args.kind and (args.kind != profile.get("kind") or args.language != profile.get("language")):
+        print(f"error: this project is recorded as a {profile.get('language')} {profile.get('kind')} "
+              f"({pk.PROFILE.as_posix()}). To change it, delete that file and run again; existing files are kept.",
+              file=sys.stderr)
+        return 1
+    try:
+        choice = choose(args, repo, kinds, profile)
+        if args.name and not pk.NAME_RE.match(args.name):
+            raise ValueError("--name must be lower-case words joined by hyphens, such as my-app")
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    if choice is None:
+        files = common_files(args.language, None)
+        write_new(repo, files)
+        if kinds:
+            standalone = ", ".join(k for k, v in kinds.items() if v.standalone)
+            print(f"No project kind was chosen, so the generic layout was used. For a layout that fits "
+                  f"the project, re-run with --kind <{standalone}> (or run in a terminal to be asked once).")
+        else:
+            print(f"No kinds are defined for {args.language} yet; the generic layout was used.")
+        profile_record = None
+    else:
+        kind = kinds[str(choice["kind"])]
+        adopting = pk.detect_existing(repo, args.language)
+        if profile is not None:
+            adopting = bool(profile.get("adopted", adopting))
+        members = [dict(m) for m in choice["members"]]  # type: ignore[union-attr]
+        try:
+            files, profile_record = kind_files(args.language, repo, kind, kinds, str(choice["name"]), members,
+                                               str(choice.get("module", "")), adopting)
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
             return 1
-        target = repo / relative
-        if target.exists():
-            print(f"kept    {relative} (already exists)")
-            continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
-        print(f"created {relative}")
+        common = common_files(args.language, kind)
+        for relative, text in files.items():
+            common[relative] = text
+        print(f"Project kind: {kind.title} ({kind.name})" + (" - existing project, adding safe files only" if adopting else ""))
+        write_new(repo, common)
+        if profile is None:
+            pk.write_profile(repo, profile_record)
+            print(f"recorded {pk.PROFILE.as_posix()} (you will not be asked again)")
+    if args.language in HINTS and (choice is None or choice["kind"] == "webapp"):
+        print(HINTS[args.language])
     print(ensure_git(repo))
     set_commit_template(repo)
     for message in add_task_tracking(repo):
         print(message)
+    if profile_record is not None:
+        print("Next: fill the <placeholders> (run `python3 scripts/check_structure.py .` to list them), "
+              "then `make install` and `make check`.")
     return 0
 
 

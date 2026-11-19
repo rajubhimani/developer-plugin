@@ -1,0 +1,2 @@
+Checks: 'clang-analyzer-*,bugprone-*,cert-*,misc-*,readability-*,-readability-magic-numbers'
+WarningsAsErrors: 'clang-analyzer-*,bugprone-*'

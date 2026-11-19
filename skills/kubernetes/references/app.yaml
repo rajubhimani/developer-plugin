@@ -1,0 +1,219 @@
+# One service, annotated. Replace <placeholders>. Look up the current API version of
+# each resource before use. Secrets are NOT in this file: the Secret is created by
+# a secrets operator or sealed tooling (see config-flow.md).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app
+  labels:
+    app.kubernetes.io/name: app
+    app.kubernetes.io/part-of: <system>
+automountServiceAccountToken: false   # the app never calls the cluster API
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  labels:
+    app.kubernetes.io/name: app
+    app.kubernetes.io/part-of: <system>
+data:
+  # Same names as .env.example and the Settings class. Plain values only.
+  APP_ENV: "production"
+  APP_LOG_LEVEL: "info"
+  APP_LOG_FORMAT: "json"
+  APP_REQUEST_TIMEOUT_SECONDS: "10"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  labels:
+    app.kubernetes.io/name: app
+    app.kubernetes.io/part-of: <system>
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0      # never drop below the desired capacity
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: app
+        app.kubernetes.io/part-of: <system>
+      annotations:
+        # Change this (or use a hashed ConfigMap name) so a config change rolls pods.
+        checksum/config: "<hash-of-config>"
+    spec:
+      serviceAccountName: app
+      terminationGracePeriodSeconds: 45   # longer than the longest request
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: app
+      containers:
+        - name: app
+          image: <registry>/<app>@sha256:<digest>   # same digest in every environment
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: app-config            # plain values, all keys
+          env:
+            # Credentials one key at a time, never envFrom a Secret.
+            - name: APP_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: APP_DATABASE_URL
+            - name: APP_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: APP_API_KEY
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi              # memory limit; CPU limit left out on purpose
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp             # the only writable path
+          startupProbe:                    # has it finished booting?
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:                  # can it take traffic? (may check dependencies)
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:                   # is the process stuck? (process only)
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]    # let routing catch up before SIGTERM work
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  labels:
+    app.kubernetes.io/name: app
+    app.kubernetes.io/part-of: <system>
+spec:
+  selector:
+    app.kubernetes.io/name: app
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: app
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: app
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: app
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: app
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: app
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: <ingress-namespace>
+      ports:
+        - port: 8000
+---
+# Migrations: a Job that runs before the new version, backward compatible.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: app-migrate
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: app
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: <registry>/<app>@sha256:<digest>
+          command: ["python", "-m", "<package>.migrate"]
+          envFrom:
+            - configMapRef:
+                name: app-config
+          env:
+            - name: APP_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: APP_DATABASE_URL
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

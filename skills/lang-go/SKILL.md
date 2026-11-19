@@ -40,3 +40,9 @@ Look these up when you start: the Go release feed `https://go.dev/dl/?mode=json`
 
 Source to check before relying on details: the Go command documentation and
 golangci-lint and govulncheck docs.
+
+## Deeper guide
+
+`references/idioms.md` covers how this language handles errors, concurrency,
+configuration, logging, testing, security and the container image, and where it
+differs from the others. Read it when you design or review more than a small edit.

@@ -61,6 +61,19 @@ def main() -> int:
             if age > MAX_AGE_DAYS:
                 problems.append(f"{folder}: last verified {age} days ago; re-check against current docs")
 
+    for agent in sorted((ROOT / "agents").glob("*.md")):
+        fields = frontmatter(agent)
+        if fields.get("name") != agent.stem:
+            problems.append(f"agents/{agent.stem}: name '{fields.get('name')}' must match file")
+        if not NAME_RE.match(agent.stem):
+            problems.append(f"agents/{agent.stem}: name must be kebab-case")
+        if not fields.get("description"):
+            problems.append(f"agents/{agent.stem}: description missing")
+        if not fields.get("tools"):
+            problems.append(f"agents/{agent.stem}: tools must be listed explicitly")
+        if "memory" in fields:
+            problems.append(f"agents/{agent.stem}: no memory field; lasting notes live in files")
+
     version_re = re.compile(r"(?<![\w.])\d+\.\d+(\.\d+)?(?![\w.])|\b(?:C|C\+\+)\d{2}\b|\bJDK ?\d+|\bJava \d+|\bPython 3\.\d+|\bNode\.?js? \d+|\bGo 1\.\d+")
     allowed = ("Agent Plugins 1.0",)  # a published specification's name, not a tool version
     doc_files = [ROOT / "README.md"] + sorted((ROOT / "docs").glob("*.md"))

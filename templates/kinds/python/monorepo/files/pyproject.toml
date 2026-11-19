@@ -1,0 +1,42 @@
+# Workspace root. It is not a package (package = false): it holds the shared tool
+# settings and the list of members. One lock file (uv.lock) covers every member.
+[project]
+name = "{{name}}-workspace"
+version = "0.0.0"
+requires-python = ">=<oldest-supported-python>"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["apps/*", "packages/*"]
+
+# Shared by every member. Members must not repeat these. httpx2 is the HTTP client the
+# current Starlette test client uses (use httpx with an older Starlette).
+[dependency-groups]
+dev = ["pytest", "httpx2", "ruff", "pyright"]
+
+[tool.ruff]
+line-length = 100
+# Where each member's code lives, so imports are sorted as first-party.
+src = [{{source_dirs}}]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+reportDeprecated = "error"
+include = ["apps", "packages"]
+# Pyright finds a member by its source folder (add one when you add a member).
+extraPaths = [{{source_dirs}}]
+
+[tool.pytest.ini_options]
+# importlib mode lets every member have its own tests folder without name clashes.
+addopts = "-ra --strict-markers --import-mode=importlib"
+# A deprecated call fails the test run so it is replaced, not ignored. If a third-party
+# warning cannot be fixed yet, add a narrow ignore with a reason and a date, for example
+# "ignore:text of the warning:DeprecationWarning:the.module" (see dependency-management).
+filterwarnings = ["error::DeprecationWarning", "error::PendingDeprecationWarning"]
+testpaths = ["apps", "packages"]

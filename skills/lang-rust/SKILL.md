@@ -41,3 +41,9 @@ Look these up when you start: the stable channel manifest at
 
 Source to check before relying on details: The Cargo Book, the Clippy and
 rustfmt documentation, and the cargo-deny docs.
+
+## Deeper guide
+
+`references/idioms.md` covers how this language handles errors, concurrency,
+configuration, logging, testing, security and the container image, and where it
+differs from the others. Read it when you design or review more than a small edit.

@@ -1,0 +1,23 @@
+{
+  "title": "Library",
+  "summary": "A TypeScript package other projects install.",
+  "use_when": "Other code imports it and it is published to a registry.",
+  "standalone": true,
+  "required": [
+    "package.json",
+    "tsconfig.json",
+    "src/index.ts",
+    "README.md",
+    "docs/api.md",
+    "tsconfig.build.json"
+  ],
+  "adopt_safe": [
+    "docs/api.md"
+  ],
+  "skip_common": [
+    "Dockerfile",
+    "compose.yaml",
+    ".dockerignore"
+  ],
+  "makefile": "node.mk"
+}

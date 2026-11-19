@@ -1,0 +1,24 @@
+{
+  "title": "Service",
+  "summary": "An HTTP service on Spring Boot (layers, graceful shutdown, health probes).",
+  "use_when": "It listens on a port, is deployed as a container, and has routes, rules and storage.",
+  "standalone": true,
+  "required": [
+    "settings.gradle.kts",
+    "build.gradle.kts",
+    "gradle/libs.versions.toml",
+    "src/main/java/{{javapath}}/Application.java",
+    "src/main/resources/application.yml",
+    "src/main/java/{{javapath}}/domain/Item.java",
+    "src/main/java/{{javapath}}/service/ItemService.java",
+    "src/main/java/{{javapath}}/adapter/InMemoryItemRepository.java",
+    "src/main/java/{{javapath}}/web/ItemController.java",
+    "src/test/java/{{javapath}}/ApplicationTest.java",
+    "README.md",
+    "docs/architecture.md"
+  ],
+  "adopt_safe": [
+    "docs/architecture.md"
+  ],
+  "makefile": "java.mk"
+}

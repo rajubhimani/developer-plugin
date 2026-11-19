@@ -1,0 +1,69 @@
+{
+  "title": "Web app or API service",
+  "summary": "An HTTP service deployed as a container (FastAPI layout).",
+  "use_when": "It listens on a port, is deployed, and has routes, business rules and storage.",
+  "standalone": true,
+  "required": [
+    "pyproject.toml",
+    "README.md",
+    "Dockerfile",
+    "compose.yaml",
+    ".env.example",
+    ".dockerignore",
+    "src/{{package}}/main.py",
+    "src/{{package}}/settings.py",
+    "src/{{package}}/api",
+    "src/{{package}}/domain",
+    "src/{{package}}/services",
+    "src/{{package}}/adapters",
+    "tests",
+    "docs/architecture.md",
+    "src/{{package}}/adapters/sql.py",
+    "src/{{package}}/migrate.py",
+    "src/{{package}}/migrations/env.py",
+    "src/{{package}}/migrations/versions/0001_create_items.py"
+  ],
+  "adopt_safe": [
+    "src/{{package}}/api/__init__.py",
+    "src/{{package}}/domain/__init__.py",
+    "src/{{package}}/services/__init__.py",
+    "src/{{package}}/adapters/__init__.py",
+    "tests/.gitkeep",
+    "docs/architecture.md"
+  ],
+  "skip_common": [
+    "Dockerfile",
+    "compose.yaml",
+    ".dockerignore"
+  ],
+  "shared": [
+    {
+      "from": "skills/lang-python/references/Dockerfile.python",
+      "to": "Dockerfile"
+    },
+    {
+      "from": "skills/lang-python/references/compose.python.yaml",
+      "to": "compose.yaml"
+    },
+    {
+      "from": "skills/lang-python/references/dockerignore.python",
+      "to": ".dockerignore"
+    },
+    {
+      "from": "skills/lang-python/references/env.example",
+      "to": ".env.example",
+      "member": true
+    },
+    {
+      "from": "skills/lang-python/references/settings.py",
+      "to": "src/{{package}}/settings.py",
+      "adopt": false,
+      "member": true
+    },
+    {
+      "from": "scripts/check_env.py",
+      "to": "scripts/check_env.py"
+    }
+  ],
+  "makefile": "python.mk"
+}

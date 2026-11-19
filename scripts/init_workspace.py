@@ -78,7 +78,7 @@ def index_auto(project: Project, links: list[str], others: list[str]) -> str:
 def write_index(folder: Path, project: Project, links: list[str]) -> str:
     """Create or refresh a project's INDEX.md, keeping anything outside the markers."""
     others = sorted(p.name for p in folder.glob("*.md") if p.name != INDEX_FILE)
-    auto = index_auto(project, links, others)
+    auto = index_auto(project=project, links=links, others=others)
     path = folder / INDEX_FILE
     if not path.exists():
         path.write_text(auto, encoding="utf-8")
@@ -114,8 +114,8 @@ def write_project_files(docs: Path, project: Project, links: list[str]) -> str:
     """Write a project's folder: INDEX (refreshed), commands (generated), notes (yours)."""
     folder = docs / PROJECTS_DIR / project.name
     folder.mkdir(parents=True, exist_ok=True)
-    write_generated(folder / COMMANDS_FILE, project_commands_text(project))
-    result = write_index(folder, project, links)
+    write_generated(path=folder / COMMANDS_FILE, text=project_commands_text(project))
+    result = write_index(folder=folder, project=project, links=links)
     notes = folder / PROJECT_NOTES_FILE
     if not notes.exists():
         notes.write_text(f"# Notes: {project.name}\n\nAdd facts you want kept here. "
@@ -222,14 +222,14 @@ def write_umbrella(root: Path, projects: list[Project], links: dict[str, list[st
     """Write the root files, every project folder, and the workspace file."""
     docs = root / DOCS_DIR
     docs.mkdir(exist_ok=True)
-    write_generated(docs / INDEX_FILE, index_text(root, projects))
-    write_generated(docs / LINKS_FILE, links_text(links))
+    write_generated(path=docs / INDEX_FILE, text=index_text(root=root, projects=projects))
+    write_generated(path=docs / LINKS_FILE, text=links_text(links))
     notes = docs / NOTES_FILE
     if not notes.exists():
         notes.write_text(notes_default(), encoding="utf-8")
-    results = [f"{p.name}: {write_project_files(docs, p, links.get(p.name, []))}"
+    results = [f"{p.name}: {write_project_files(docs=docs, project=p, links=links.get(p.name, []))}"
                for p in projects]
-    results.append(workspace_file(root, projects))
+    results.append(workspace_file(root=root, projects=projects))
     results.extend(write_umbrella_agent_files(root))
     results.extend(long_files(docs))
     return results
@@ -250,7 +250,7 @@ def main(argv: list[str]) -> int:
     if (root / ".git").exists():
         umbrella = root.parent if root.parent != Path.home() else root
         project = inspect(root, root.parent)
-        results = [f"{project.name}: " + write_project_files(umbrella / DOCS_DIR, project, [])]
+        results = [f"{project.name}: " + write_project_files(docs=umbrella / DOCS_DIR, project=project, links=[])]
         mode = "project"
         docs = umbrella / DOCS_DIR
     else:
@@ -261,7 +261,7 @@ def main(argv: list[str]) -> int:
             return 0
         projects = [inspect(path, root) for path in repos]
         links = resolve_links(projects)
-        results = write_umbrella(root, projects, links)
+        results = write_umbrella(root=root, projects=projects, links=links)
         mode = "umbrella"
         docs = root / DOCS_DIR
     if not args.quiet:

@@ -1,0 +1,36 @@
+{
+  "title": "Workspace",
+  "summary": "Several crates (libraries and binaries) in one repository.",
+  "use_when": "A binary and the libraries behind it change together and share one lock file.",
+  "standalone": true,
+  "required": [
+    "Cargo.toml",
+    "README.md",
+    "docs/architecture.md",
+    ".github/CODEOWNERS"
+  ],
+  "adopt_safe": [
+    "docs/architecture.md",
+    ".github/CODEOWNERS"
+  ],
+  "skip_common": [
+    "Dockerfile",
+    "compose.yaml",
+    ".dockerignore"
+  ],
+  "makefile": "rust.mk",
+  "member_dirs": {
+    "library": "crates",
+    "binary": "crates"
+  },
+  "default_members": [
+    {
+      "name": "core",
+      "kind": "library"
+    },
+    {
+      "name": "cli",
+      "kind": "binary"
+    }
+  ]
+}

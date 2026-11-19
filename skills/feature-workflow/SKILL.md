@@ -24,6 +24,13 @@ Every feature follows the same path, so anyone can see where it stands.
 7. **Report.** Say what changed, which requirement it covers, and what you did
    not verify. Show the task list with `make tasks` when asked for status.
 
+## Agents
+
+When the plugin's agents are available, use them for the steps above and follow
+the `agent-handoff` skill: requirements, design, test plan, plan, red tests,
+build and review are done by separate agents, and the person approves
+requirements, design, plan and merge.
+
 ## Rules
 
 - Work from the task files, not from memory of what was discussed.

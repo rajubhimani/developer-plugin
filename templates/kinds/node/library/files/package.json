@@ -1,0 +1,23 @@
+{
+  "name": "{{name}}",
+  "version": "0.1.0",
+  "description": "<one line: what this library does>",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "license": "<spdx-license-id>"
+}

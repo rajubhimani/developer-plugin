@@ -1,0 +1,14 @@
+{
+  "title": "Shared configuration",
+  "summary": "Shared TypeScript settings every member extends.",
+  "use_when": "Members of a monorepo should share one tsconfig base instead of copies.",
+  "standalone": false,
+  "required": [
+    "package.json",
+    "tsconfig.base.json",
+    "tsconfig.library.json",
+    "tsconfig.app.json"
+  ],
+  "adopt_safe": [],
+  "makefile": "node.mk"
+}

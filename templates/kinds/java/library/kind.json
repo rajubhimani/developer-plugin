@@ -1,0 +1,24 @@
+{
+  "title": "Library",
+  "summary": "A Java library published to a Maven repository.",
+  "use_when": "Other code depends on it; nothing is deployed from this repository.",
+  "standalone": true,
+  "required": [
+    "settings.gradle.kts",
+    "build.gradle.kts",
+    "gradle/libs.versions.toml",
+    "src/main/java/{{javapath}}/Greeter.java",
+    "src/test/java/{{javapath}}/GreeterTest.java",
+    "README.md",
+    "docs/api.md"
+  ],
+  "adopt_safe": [
+    "docs/api.md"
+  ],
+  "skip_common": [
+    "Dockerfile",
+    "compose.yaml",
+    ".dockerignore"
+  ],
+  "makefile": "java.mk"
+}

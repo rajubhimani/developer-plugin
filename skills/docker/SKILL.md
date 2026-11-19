@@ -33,6 +33,33 @@ for current instruction syntax before relying on a flag.
 - **Labels:** set standard OCI labels (source, revision, created) so an image
   can be traced back to its commit.
 
+## Layers and caching
+
+- Order instructions from least to most often changing: base, tooling, dependency
+  manifests and install, then source. A changed layer rebuilds every layer after it.
+- Install dependencies from manifest and lock files only (bind-mount or copy just
+  those), so a source edit never reinstalls them.
+- Use BuildKit cache mounts for package caches (`RUN --mount=type=cache,...`); they
+  speed up rebuilds and never enter the image.
+- `.dockerignore` keeps the context small and stops unrelated files from
+  invalidating the cache.
+- In CI the builder is usually fresh: export and import the cache (registry or the
+  CI backend) with all stages included. Look up the current cache options.
+- Use multi-stage builds: compilers and dev tools stay in the build stage; the final
+  stage holds only the runtime and the output. Add named `dev` and `test` stages for
+  Compose and CI, and ship only the `runtime` stage.
+- Build for the platform you run; test the stop time (`docker stop` should return
+  quickly if signals reach the app).
+- Check: build twice (second is cached), change one source line (only late layers
+  rebuild), `docker history` (no secrets), `docker run --rm <image> id` (not root).
+
+## Per language
+
+The recipe differs by language: dependency layer, runtime base, signal handling and
+memory settings. See the idioms guide inside each `lang-*` skill; the Python
+templates and guide are in the `lang-python` skill's references folder. For running images in a
+cluster see `kubernetes`.
+
 ## Build gates
 
 1. `.dockerignore` excludes `.git`, local env files, build output and caches.

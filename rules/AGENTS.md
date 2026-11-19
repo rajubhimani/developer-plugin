@@ -41,33 +41,59 @@ These rules apply to every task that writes or changes code.
 10. Do not use `eval`, `exec`, bare `except:`, silent `except`, or mutable
    default arguments.
 11. Comments explain a decision or a trap, not the next line.
+12. Call by name. Pass arguments to your own functions and classes by keyword
+    (`Token(id=1, form=word)`), one per line when the call does not fit on one
+    line. The exceptions are a call with a single obvious argument (`len(xs)`),
+    a library function that only accepts positional arguments, a callback
+    typed `Callable[[A, B], R]`, which has no parameter names, and the
+    `*args` part of a variadic call. Mark
+    parameters that callers must name keyword-only with `*` in the definition.
 
 ## Tests and checks
 
-12. Deterministic logic gets tests. A bug fix adds a test that would have
+13. Deterministic logic gets tests. A bug fix adds a test that would have
     caught it.
-13. Run the project's single check command (lint, format, types, tests)
+14. Run the project's single check command (lint, format, types, tests)
     before reporting work done. Warnings count as failures. Say so plainly if
     a check could not run.
 
 ## Honesty
 
-14. Mark data nobody has checked as DRAFT. State what a result does not show.
-15. Never claim a test passed, or a step worked, without running it.
+15. Mark data nobody has checked as DRAFT. State what a result does not show.
+16. Never claim a test passed, or a step worked, without running it.
 
 ## Documentation
 
-16. Every module has a short doc page: what it does, its public API, and how
+17. Every module has a short doc page: what it does, its public API, and how
     to use it. Keep the doc next to the code or in `docs/`.
-17. Every folder that holds code or docs has an index (`README.md`) listing
+18. Every folder that holds code or docs has an index (`README.md`) listing
     its contents with one line each and a link. Update the index in the same
     change that adds or removes a file.
-18. Wrap Markdown at 80 columns.
+19. Wrap Markdown at 80 columns.
+
+## Maintained code
+
+23. Choose maintained libraries. Before adding a dependency, check that it is
+    maintained: a release or commit within the last year or so, issues and
+    security reports answered, not archived or marked deprecated, and a licence
+    you can use. Prefer the standard library, then a library the project
+    already uses, then a well-known maintained one. When a dependency you use
+    stops being maintained, replace it with a maintained one as its own change.
+24. Update deprecated code when you find it. A deprecated API, call, option,
+    configuration key, dependency or practice found in code you read or change
+    is replaced with its documented replacement now, as its own small change (a
+    separate commit) with the tests green; do not leave it for later. The
+    project's checks treat deprecation warnings as errors so none is missed. If
+    the replacement changes behaviour users can see, or the migration is too
+    large for one change, say so, record a task with an owner, and follow
+    `versioning-release`; do not leave it silently.
+25. Say what you replaced: list each deprecation and its replacement in the
+    commit message or the report.
 
 ## Git
 
-19. Commit or push only when the user asks.
-20. Commit messages, pull requests, code and docs carry no AI or tool
+20. Commit or push only when the user asks.
+21. Commit messages, pull requests, code and docs carry no AI or tool
     attribution. The user is the only author.
-21. Never rewrite pushed history without the user's explicit approval for
+22. Never rewrite pushed history without the user's explicit approval for
     that push.

@@ -68,7 +68,7 @@ def run(as_json: bool) -> int:
     rows = []
     for name, kind, arg in TOOLS:
         try:
-            rows.append({"tool": name, "latest": latest(kind, arg), "source": f"{kind}:{arg}"})
+            rows.append({"tool": name, "latest": latest(kind=kind, arg=arg), "source": f"{kind}:{arg}"})
         except (urllib.error.URLError, OSError, KeyError, IndexError, ValueError) as exc:
             rows.append({"tool": name, "latest": "unavailable", "source": f"{kind}:{arg}",
                          "error": type(exc).__name__})

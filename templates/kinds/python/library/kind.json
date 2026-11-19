@@ -1,0 +1,25 @@
+{
+  "title": "Library",
+  "summary": "A package other projects install from a registry.",
+  "use_when": "Other code imports it and nothing is deployed from this repository.",
+  "standalone": true,
+  "required": [
+    "pyproject.toml",
+    "README.md",
+    "src/{{package}}/__init__.py",
+    "src/{{package}}/py.typed",
+    "tests",
+    "docs/api.md"
+  ],
+  "adopt_safe": [
+    "src/{{package}}/py.typed",
+    "docs/api.md",
+    "tests/.gitkeep"
+  ],
+  "skip_common": [
+    "Dockerfile",
+    "compose.yaml",
+    ".dockerignore"
+  ],
+  "makefile": "python.mk"
+}

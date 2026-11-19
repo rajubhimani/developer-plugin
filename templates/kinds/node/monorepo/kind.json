@@ -1,0 +1,47 @@
+{
+  "title": "Monorepo (pnpm workspace)",
+  "summary": "Apps and shared packages (ui, utils, config) in one repository.",
+  "use_when": "Apps and libraries change together and share code, and you want one CI and one set of standards.",
+  "standalone": true,
+  "required": [
+    "package.json",
+    "pnpm-workspace.yaml",
+    "README.md",
+    "docs/architecture.md",
+    ".github/CODEOWNERS"
+  ],
+  "adopt_safe": [
+    "docs/architecture.md",
+    ".github/CODEOWNERS"
+  ],
+  "skip_common": [
+    "Dockerfile",
+    "compose.yaml",
+    ".dockerignore"
+  ],
+  "makefile": "node-monorepo.mk",
+  "member_dirs": {
+    "webapp": "apps",
+    "library": "packages",
+    "ui": "packages",
+    "config": "packages"
+  },
+  "default_members": [
+    {
+      "name": "web",
+      "kind": "webapp"
+    },
+    {
+      "name": "ui",
+      "kind": "ui"
+    },
+    {
+      "name": "utils",
+      "kind": "library"
+    },
+    {
+      "name": "config",
+      "kind": "config"
+    }
+  ]
+}

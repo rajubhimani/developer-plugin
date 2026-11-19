@@ -1,0 +1,38 @@
+# Save as .dockerignore. Keeps the build context small, so the cache is not
+# invalidated by unrelated files and nothing private reaches an image.
+.git
+.gitignore
+.github
+
+# Local settings and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python caches and environments
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+htmlcov
+dist
+build
+*.egg-info
+
+# Editor and OS files
+.idea
+.vscode
+.DS_Store
+
+# Not needed in the image
+docs
+tests
+Dockerfile*
+compose*.yaml
+Makefile
+k8s

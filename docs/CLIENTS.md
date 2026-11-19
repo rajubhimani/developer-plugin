@@ -10,6 +10,13 @@ own manifest. The table lists what each client needs and how it was checked.
 | GitHub Copilot CLI | `plugin.json` (Agent Plugins 1.0) | `skills/` | not generated | not used | `make install-copilot` | Installed from GitHub; reinstall after the branch is merged |
 | Antigravity | `plugin.json` | `skills/` | `rules/AGENTS.md` | `hooks.json` at root | `make install-antigravity` | Copied; shows in the app's plugin list |
 
+## Agents
+
+`agents/*.md` holds twelve role-named subagents, each preloading the skills it
+follows (see the README for the list). Only Claude Code reads them
+today. Codex, Copilot and Antigravity use their own agent formats, which are
+not generated or verified yet, so they still get the skills alone.
+
 ## Where each client keeps its copy
 
 Each install copies the plugin into the client's own folder, so deleting the
@@ -19,6 +26,13 @@ project folder does not break it. Re-run the install to pick up changes.
 - Codex: `~/.codex/marketplaces/developer-plugin-local` (then `~/.codex/plugins/cache`)
 - Antigravity: `~/.gemini/config/plugins/developer-plugin`
 - Copilot CLI: `~/.copilot/installed-plugins` (copied from the git remote)
+
+## Checking an install
+
+`make check-install` compares each copy against this checkout (version, source
+folder and file hashes) and reports stale, edited, missing or no-longer-shipped
+files. Copilot installs from the git remote and is not checked. Copies made
+before the manifest existed report as unreadable until you re-run their installer.
 
 ## Notes
 

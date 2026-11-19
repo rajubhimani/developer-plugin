@@ -1,0 +1,21 @@
+{
+  "title": "UI component library",
+  "summary": "Shared React components (buttons, forms, layout).",
+  "use_when": "Several apps reuse the same components and design.",
+  "standalone": true,
+  "required": [
+    "package.json",
+    "tsconfig.json",
+    "src/index.ts",
+    "README.md",
+    "vitest.config.ts",
+    "tsconfig.build.json"
+  ],
+  "adopt_safe": [],
+  "skip_common": [
+    "Dockerfile",
+    "compose.yaml",
+    ".dockerignore"
+  ],
+  "makefile": "node.mk"
+}

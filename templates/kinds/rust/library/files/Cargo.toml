@@ -1,0 +1,16 @@
+[package]
+name = "{{name}}"
+version = "0.1.0"
+edition = "<edition>"
+description = "<one line: what this library does>"
+license = "<spdx-license-id>"
+repository = "<repository-url>"
+readme = "README.md"
+
+[dependencies]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
