@@ -37,6 +37,9 @@ author of commits, pull requests and docs: never add tool or AI attribution
 - The pull request template in `.github/pull_request_template.md` lists the checks.
 - Squash-merge a branch with messy work-in-progress commits. Keep a merge commit
   only when the individual commits matter.
+- Write the description for the person deciding whether to merge: lead with
+  what they must decide or verify, then what changed and why. Name what was not
+  verified. Include a rollback line (revert, switch off, or fix forward).
 - Reviews are for the code, not the author. Ask questions before requesting changes.
 
 ## History safety
@@ -46,6 +49,8 @@ author of commits, pull requests and docs: never add tool or AI attribution
   `git push --force-with-lease`, never a plain `--force`.
 - Ask the user before any command that rewrites history, deletes branches, or
   discards uncommitted work (`reset --hard`, `clean -fd`, `checkout --`).
+- Never run probes or experiments that rewrite files in the shared working
+  tree; use a copy.
 - Tags and releases: see the `versioning-release` skill.
 
 ## Never commit

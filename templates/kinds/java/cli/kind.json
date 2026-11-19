@@ -1,0 +1,20 @@
+{
+  "title": "Command line tool",
+  "summary": "A program people run in a terminal.",
+  "use_when": "The product is a command, not a server or a library.",
+  "standalone": true,
+  "required": [
+    "settings.gradle.kts",
+    "build.gradle.kts",
+    "gradle/libs.versions.toml",
+    "src/main/java/{{javapath}}/Main.java",
+    "src/main/java/{{javapath}}/Cli.java",
+    "src/test/java/{{javapath}}/CliTest.java",
+    "README.md"
+  ],
+  "adopt_safe": [],
+  "skip_common": [
+    "compose.yaml"
+  ],
+  "makefile": "java.mk"
+}

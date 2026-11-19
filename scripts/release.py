@@ -73,9 +73,9 @@ def bump_release(level: str, date: str) -> str:
     text = CHANGELOG.read_text(encoding="utf-8")
     if "## [Unreleased]" not in text:
         raise SystemExit("CHANGELOG.md has no '## [Unreleased]' section")
-    if not section(text, "Unreleased"):
+    if not section(text=text, heading="Unreleased"):
         raise SystemExit("nothing to release: the Unreleased section is empty")
-    new = bump(current_version(), level)
+    new = bump(version=current_version(), level=level)
     if f"## [{new}]" in text:
         raise SystemExit(f"version {new} is already in the changelog")
     CHANGELOG.write_text(text.replace("## [Unreleased]", f"## [Unreleased]\n\n## [{new}] - {date}", 1),
@@ -89,7 +89,7 @@ def verify(version: str) -> None:
     versions = set(manifest_versions().values())
     if versions != {version}:
         raise SystemExit(f"manifests say {sorted(versions)}, expected {version}")
-    if not section(CHANGELOG.read_text(encoding="utf-8"), version):
+    if not section(text=CHANGELOG.read_text(encoding="utf-8"), heading=version):
         raise SystemExit(f"CHANGELOG.md has no notes for {version}")
     print(f"ok: {version} matches the manifests and the changelog")
 
@@ -107,13 +107,13 @@ def main(argv: list[str]) -> int:
     notes_cmd.add_argument("version")
     args = parser.parse_args(argv)
     if args.command == "bump":
-        new = bump_release(args.level, args.date)
+        new = bump_release(level=args.level, date=args.date)
         print(f"version {new}: manifests and CHANGELOG.md updated.")
         print("Next: review the diff, commit it, then tag:  git tag -a v" + new + " -m 'v" + new + "'")
     elif args.command == "verify":
         verify(args.version)
     else:
-        print(section(CHANGELOG.read_text(encoding="utf-8"), args.version))
+        print(section(text=CHANGELOG.read_text(encoding="utf-8"), heading=args.version))
     return 0
 
 

@@ -176,6 +176,10 @@ class TestsExistTests(unittest.TestCase):
         found = any(True for pattern in patterns for path in ROOT.glob(pattern)
                     if "node_modules" not in path.parts and ".venv" not in path.parts
                     and "alignment" not in path.parts)
+        # Rust keeps unit tests inside the source file, under a cfg(test) module.
+        found = found or any("#[cfg(test)]" in path.read_text(encoding="utf-8", errors="ignore")
+                             for path in ROOT.glob("**/src/**/*.rs")
+                             if "target" not in path.parts)
         self.assertTrue(found, "add tests; the guidelines require them for new behaviour")
 
     def test_docs_have_an_index_when_present(self) -> None:

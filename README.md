@@ -66,8 +66,69 @@ just what it needs. Every skill records when it was checked (`verified:`), and
 | `git-workflow` | Branches, commits, messages, pull requests, history safety, what never to commit |
 | `versioning-release` | Semantic versions, Keep a Changelog, release tags and deprecation |
 | `code-comments` | Explaining why, keeping comments true, debt markers, docstrings |
+| `untrusted-input` | Treating issues, web pages and tool output as evidence, not instructions |
+| `shell-hygiene` | Foreground by default; no process left running |
+| `writing-style` | Plain-language rules for docs, reports, PRs and agent instructions |
+| `testing-strategy` | Test count by risk, test first, honest tests, small reliable suites |
+| `security-review` | Security checklist for a diff or design |
+| `debug-failure` | Severity, reproduce, isolate, revert or fix forward |
+| `agent-handoff` | Dispatching the agents, the brief and report, verifying, routing findings |
+| `change-triage` | Choosing hotfix, docs/config, small change or feature |
+| `design-patterns` | Choosing patterns and principles; composition over inheritance; when not to |
+| `domain-modeling` | Layers, ports and adapters, domain rules; only where the domain is complex |
+| `error-handling` | Detecting, classifying, reporting and testing errors without leaks |
+| `resilience` | Timeouts, bounded retries, idempotency, circuit breakers, degradation |
+| `observability` | Structured logs, metrics, traces, redaction, symptom alerts |
+| `database-migrations` | Versioned migrations, expand and contract, backfills, rollback |
+| `refactoring` | Characterization tests, small steps, strangler, managing technical debt |
+| `api-design` | Resources, problem-details errors, pagination, idempotency keys, versioning |
+| `performance` | Measure first, profile, fix the biggest cost, cache with a plan |
+| `dependency-management` | Choosing, pinning, updating and auditing dependencies; supply chain |
+| `secrets-and-config` | Config in the environment, secrets in a manager, rotation, leaks |
+| `accessibility` | Semantic HTML, keyboard, focus, contrast, testing at level AA |
+| `concurrency` | Shared state, locks, async pitfalls, cancellation, testing races |
+| `architecture-decisions` | Decision records and docs organized by purpose |
+| `delivery-practices` | Small batches, flags, progressive rollout, the four delivery measures |
+| `ai-assisted-development` | Scoped tasks, plan first, review generated code as suspect |
+| `kubernetes` | Config via ConfigMap and Secret, probes, shutdown, security, scaling, packaging |
+| `project-structure` | The folder layout for a library, web app, command line tool or monorepo; check and fix an existing project |
 
 The CI template is in `skills/ci-cd/references/github-actions.yml`.
+
+Each language skill has `references/idioms.md` (how that language handles errors,
+concurrency, configuration, logging, testing, security and its container image).
+`lang-python` also ships a uv multi-stage Dockerfile, a Compose stack, `.env.example`
+and `.dockerignore` templates, and a guide to running Python under Docker, Compose
+and Kubernetes. `kubernetes` ships an annotated manifest set, the `.env` to cluster
+config flow, and a Kustomize layout.
+
+## Agents
+
+Claude Code loads twelve subagents from `agents/`. Each is a role, not a
+product name, and follows the skills it lists. They are stateless: work moves
+between them as files, and the main session dispatches them, checks every
+report and asks the person at each gate. The `agent-handoff` skill holds the
+order, the brief, the report shape and how findings are routed.
+
+| Step | Agent | Tools | Use it for |
+|---|---|---|---|
+| Explore | `researcher` | write notes | Should we build it? One dated note with a recommendation |
+| Requirements | `requirements-analyst` | write docs | REQ lines with Given/When/Then examples; never designs |
+| Design | `architect` | write docs | Design note, contracts, risk per requirement, slices |
+| Test intent | `test-designer` | write docs | What the tests must prove, by risk; no test code |
+| Plan | `planner` | write tasks | Small ordered tasks with risk and rollback lines |
+| Red tests | `test-writer` | tests only | Failing tests first, confirmed to fail for the right reason |
+| Build | `builder` | edit code | One task: green, refactor, docs, checks; never edits a red test |
+| Docs | `docs-writer` | edit docs | Docs and indexes for a docs-only task |
+| Review | `code-reviewer` | read-only | Independent review of a diff before merge |
+| Review | `security-reviewer` | read-only | Security check of a diff or design |
+| Review | `deploy-reviewer` | read-only | Rollback, migrations, env vars, pipeline, release order |
+| Failure | `debugger` | read-only | Reproduce, isolate, state the cause; never patches |
+
+The definer, the builder, the test author and the reviewer stay separate, so no
+one grades their own work. Agents use `model: inherit`; pin a model in an
+agent's front matter if a role needs a stronger one. `make validate` checks each
+agent's front matter.
 
 ## Tests
 
@@ -88,6 +149,36 @@ enforces:
 - relative links in `docs/` point at files that exist;
 - the usual project hygiene (README, standard targets, lock file, no committed
   secrets, pinned CI actions, a docs index).
+
+### Project kinds
+
+`make init-project` asks what the project is, once, and records the answer in
+`.developer-plugin/project.json`. The kind decides the layout:
+
+| Language | Kinds |
+|---|---|
+| Python | library, webapp (layered service), cli, monorepo (uv workspace of apps and packages) |
+| TypeScript | webapp, library, ui, monorepo (pnpm workspace: `apps/web`, `packages/ui`, `utils`, `config`) |
+| Go | service, library, cli, monorepo (`go.work`) |
+| Rust | library, binary, workspace |
+| Java (Gradle) | library, cli, service (Spring Boot) |
+| C and C++ (CMake) | library, executable |
+
+```bash
+make init-project REPO=../my-lib LANG=python KIND=library NAME=my-lib
+make init-project REPO=../shop LANG=node KIND=monorepo NAME=shop MEMBERS=web:webapp,ui:ui,utils:library
+make structure-check REPO=../my-lib      # read-only: FAIL, WARN, TODO
+```
+
+In a terminal, leave `KIND` out to be asked. In a folder that already holds a project the
+kind is recorded and only safe files are added; code is never moved or replaced, and
+`make structure-check` says what to change by hand.
+
+For Python, `make init-project` also copies a uv multi-stage `Dockerfile`, a Compose
+stack, `.env.example`, `.dockerignore` and `src/app/settings.py`, and `make check`
+runs `make check-env`. That check fails when the Settings fields, `.env.example` and
+the cluster manifests (`k8s`, `deploy`, `helm`, `kustomize`) name different variables,
+so a setting forgotten in one place is caught before it fails at start-up.
 
 ## Versions
 
@@ -121,6 +212,17 @@ repo reach a client after you re-run its installer.
 - `make install-claude` (or `install-codex`, `install-antigravity`, `install-copilot`)
 - `make install-all` runs every installer that is available.
 - Install a tagged version to test it: `make install-claude REF=vX.Y.Z`.
+- Preview first: `make install-claude DRY=1` lists what would be added, updated
+  or removed and writes nothing.
+- Each re-install ends with "N added, M updated, K unchanged, J removed", from a
+  manifest (version and a hash per file) stored in the copy.
+- `make check-install` is read-only. It reports a copy that is stale (this repo
+  changed since the install), edited by hand, missing files, or from another
+  checkout. It exits 0 when everything is current or not installed, 1 on drift,
+  2 when a manifest is unreadable (reinstall to record one).
+- An install stops before a downgrade or a major version step and asks for a
+  typed `yes`. With no terminal it writes nothing; add `CONFIRM=1`
+  (`--confirm-update`) to allow it.
 - `make uninstall-claude` and `make uninstall-antigravity` remove what the installers made.
 - Copilot installs from the git remote, so it gets the pushed default branch.
 
@@ -137,6 +239,9 @@ macOS and Linux only.
 | Install for Antigravity | `python scripts/install.py antigravity` |
 | Install for Copilot | `python scripts/install.py copilot` |
 | A tagged version | add `--ref vX.Y.Z` to any install |
+| Preview an install | add `--dry-run` |
+| Allow a downgrade or major step | add `--confirm-update` |
+| Report drift (read-only) | `python scripts/install.py check-install` |
 | Uninstall | `python scripts/install.py uninstall claude` (or `codex`, `antigravity`) |
 
 Install git and Python first. The client CLIs (`claude`, `codex`, `copilot`) must

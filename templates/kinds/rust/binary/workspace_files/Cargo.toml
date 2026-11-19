@@ -1,0 +1,14 @@
+[package]
+name = "{{name}}"
+description = "<one line: what this program does>"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Depend on a sibling crate through the workspace, for example:
+# {{scope}}-core = { workspace = true }
+
+[lints]
+workspace = true

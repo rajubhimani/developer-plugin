@@ -30,6 +30,29 @@ Specification at the Compose documentation site. Use the file name `compose.yaml
 - **Ports bound to localhost** unless another machine must reach them:
   `"127.0.0.1:<host>:<container>"`.
 
+## Environment and `.env`
+
+- **Two jobs, do not mix them up.** A `.env` file next to `compose.yaml` fills
+  `${VAR}` inside the compose file. `env_file:` passes a file's values into a
+  container. Use both on purpose and name the variables the same as the app's
+  settings and the Kubernetes ConfigMap (see `kubernetes`).
+- **Precedence:** command-line values and the shell beat `environment:`, which beats
+  `env_file:`, which beats the image's own defaults. Run `docker compose config` to
+  see the final values rather than guessing.
+- `.env` is git-ignored and docker-ignored; `.env.example` is committed with names
+  and dummy values only. Required values use `${VAR:?message}` so a missing one
+  stops `up` with a clear message.
+- Values that name another container (`db`) go under `environment:`; values that
+  differ per developer go in `.env`.
+- Run migrations as a one-shot service and wait with
+  `condition: service_completed_successfully`.
+- `init: true` runs a small init process and can hide a signal-handling bug that
+  appears in a cluster. Also test the stop time without it, and use exec-form
+  commands.
+- Run the same image target that you ship in a CI smoke test with `up --wait`.
+- A Python example stack (file `compose.python.yaml`) is in the `lang-python`
+  skill's references folder.
+
 ## Checks
 
 1. `docker compose config` must succeed.

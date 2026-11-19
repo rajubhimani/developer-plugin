@@ -1,0 +1,15 @@
+{
+  "title": "Service",
+  "summary": "A long-running HTTP service (cmd, internal, graceful shutdown).",
+  "use_when": "It listens on a port and is deployed as a container.",
+  "standalone": true,
+  "required": [
+    "go.mod",
+    "cmd/{{name}}/main.go",
+    "internal/config/config.go",
+    "internal/server/server.go",
+    "README.md"
+  ],
+  "adopt_safe": [],
+  "makefile": "go.mk"
+}

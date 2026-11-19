@@ -1,0 +1,19 @@
+{
+  "title": "Web app",
+  "summary": "A browser application (React, TypeScript, Vite).",
+  "use_when": "Users open it in a browser; it is built to static files and served.",
+  "standalone": true,
+  "required": [
+    "package.json",
+    "index.html",
+    "vite.config.ts",
+    "tsconfig.json",
+    "src/main.tsx",
+    "src/App.tsx",
+    "README.md"
+  ],
+  "adopt_safe": [
+    "README.md"
+  ],
+  "makefile": "node.mk"
+}

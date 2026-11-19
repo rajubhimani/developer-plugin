@@ -1,0 +1,18 @@
+{
+  "title": "Library",
+  "summary": "A crate other projects depend on.",
+  "use_when": "Other code depends on it and it is published to a registry.",
+  "standalone": true,
+  "required": [
+    "Cargo.toml",
+    "src/lib.rs",
+    "README.md"
+  ],
+  "adopt_safe": [],
+  "skip_common": [
+    "Dockerfile",
+    "compose.yaml",
+    ".dockerignore"
+  ],
+  "makefile": "rust.mk"
+}

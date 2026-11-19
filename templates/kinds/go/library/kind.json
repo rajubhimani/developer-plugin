@@ -1,0 +1,21 @@
+{
+  "title": "Library",
+  "summary": "A Go package other modules import.",
+  "use_when": "Other code imports it; no binary is built from this repository.",
+  "standalone": true,
+  "required": [
+    "go.mod",
+    "doc.go",
+    "{{gopkg}}.go",
+    "README.md"
+  ],
+  "adopt_safe": [
+    "doc.go"
+  ],
+  "skip_common": [
+    "Dockerfile",
+    "compose.yaml",
+    ".dockerignore"
+  ],
+  "makefile": "go.mk"
+}

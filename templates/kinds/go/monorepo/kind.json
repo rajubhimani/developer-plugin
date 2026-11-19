@@ -1,0 +1,37 @@
+{
+  "title": "Monorepo (go.work)",
+  "summary": "Several Go modules (services, commands, libraries) in one repository.",
+  "use_when": "Services and libraries change together and share code, and you want one CI and one set of standards.",
+  "standalone": true,
+  "required": [
+    "go.work",
+    "README.md",
+    "docs/architecture.md",
+    ".github/CODEOWNERS"
+  ],
+  "adopt_safe": [
+    "docs/architecture.md",
+    ".github/CODEOWNERS"
+  ],
+  "skip_common": [
+    "Dockerfile",
+    "compose.yaml",
+    ".dockerignore"
+  ],
+  "makefile": "go-monorepo.mk",
+  "member_dirs": {
+    "service": "apps",
+    "cli": "apps",
+    "library": "packages"
+  },
+  "default_members": [
+    {
+      "name": "api",
+      "kind": "service"
+    },
+    {
+      "name": "core",
+      "kind": "library"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "{{name}}"
+version = "0.1.0"
+description = "<one line: what this service does>"
+readme = "README.md"
+requires-python = ">=<oldest-supported-python>"
+dependencies = ["fastapi", "uvicorn", "pydantic-settings", "sqlalchemy", "alembic", "psycopg[binary]"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/{{package}}"]
+
+[dependency-groups]
+# httpx2 is the HTTP client the current Starlette test client uses; with an older
+# Starlette, use httpx instead.
+dev = ["pytest", "httpx2", "ruff", "pyright"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.pyright]
+typeCheckingMode = "strict"
+reportDeprecated = "error"
+include = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --import-mode=importlib"
+# A deprecated call fails the test run so it is replaced, not ignored. If a third-party
+# warning cannot be fixed yet, add a narrow ignore with a reason and a date, for example
+# "ignore:text of the warning:DeprecationWarning:the.module" (see dependency-management).
+filterwarnings = ["error::DeprecationWarning", "error::PendingDeprecationWarning"]

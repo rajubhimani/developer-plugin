@@ -1,0 +1,21 @@
+# Virtual manifest: the root holds only the workspace, no package of its own.
+[workspace]
+resolver = "<resolver>"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "<edition>"
+license = "<spdx-license-id>"
+repository = "<repository-url>"
+
+# Declare every dependency version once here; members write `name.workspace = true`.
+# Binaries pin what they need; libraries keep ranges loose (see the lang-rust skill).
+[workspace.dependencies]
+{{workspace_dependencies}}
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }

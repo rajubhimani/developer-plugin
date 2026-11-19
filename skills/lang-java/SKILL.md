@@ -42,3 +42,9 @@ from the Apache release page, since Homebrew formulas can lag.
 
 Source to check before relying on details: the Gradle and Maven documentation,
 the OpenJDK release notes, and the Spring Boot system requirements.
+
+## Deeper guide
+
+`references/idioms.md` covers how this language handles errors, concurrency,
+configuration, logging, testing, security and the container image, and where it
+differs from the others. Read it when you design or review more than a small edit.

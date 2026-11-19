@@ -1,0 +1,26 @@
+{
+  "title": "Library",
+  "summary": "A C library with a public header other code includes.",
+  "use_when": "Other code links against it; nothing runs from this repository.",
+  "standalone": true,
+  "required": [
+    "CMakeLists.txt",
+    "CMakePresets.json",
+    "include/{{package}}/{{package}}.h",
+    "src/{{package}}.c",
+    "tests/test_{{package}}.c",
+    "README.md",
+    "docs/api.md"
+  ],
+  "adopt_safe": [
+    "docs/api.md",
+    ".clang-format",
+    ".clang-tidy"
+  ],
+  "skip_common": [
+    "Dockerfile",
+    "compose.yaml",
+    ".dockerignore"
+  ],
+  "makefile": "c-cmake.mk"
+}

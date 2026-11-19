@@ -1,0 +1,80 @@
+# Local stack for a Python service. Compose Specification, no version key.
+# Remove the services you do not need (db, migrate, adminer) and the lines that
+# refer to them. The migrate service runs the migrations that ship inside the package
+# (python -m <package>.migrate); change the command if you use another tool.
+#   cp .env.example .env
+#   docker compose up --build --wait
+#   docker compose --profile tools up        # also start the admin UI
+#   docker compose config                    # show the resolved values
+#
+# .env here does two jobs: Compose reads it to fill ${VAR} in this file, and
+# env_file below passes its values into the container. Keep names identical to
+# the Settings class and to the Kubernetes ConfigMap.
+services:
+  app:
+    build:
+      context: .
+      target: dev
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Values that point at other containers belong here, not in .env.
+      APP_DATABASE_URL: postgresql://app:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/app
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+        - action: rebuild
+          path: ./pyproject.toml
+        - action: rebuild
+          path: ./uv.lock
+    # Test the stop time with this off too; init can hide a signal bug.
+    init: true
+
+  migrate:
+    # One-shot job: runs the migrations, then exits with code zero.
+    build:
+      context: .
+      target: dev
+    command: ["python", "-m", "<package>.migrate"]
+    environment:
+      APP_DATABASE_URL: postgresql://app:${DB_PASSWORD:?set DB_PASSWORD in .env}@db:5432/app
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  db:
+    # Tag comes from .env and the stack refuses to start without it.
+    image: ${DB_IMAGE:?set DB_IMAGE in .env to a pinned tag}
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      POSTGRES_DB: app
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  adminer:
+    image: ${ADMINER_IMAGE:-adminer}
+    profiles: ["tools"]
+    ports:
+      - "127.0.0.1:8081:8080"
+
+volumes:
+  db-data:

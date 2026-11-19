@@ -1,0 +1,26 @@
+{
+  "title": "Library",
+  "summary": "A C++ library with public headers other code includes.",
+  "use_when": "Other code links against it; nothing runs from this repository.",
+  "standalone": true,
+  "required": [
+    "CMakeLists.txt",
+    "CMakePresets.json",
+    "include/{{package}}/{{package}}.hpp",
+    "src/{{package}}.cpp",
+    "tests/test_{{package}}.cpp",
+    "README.md",
+    "docs/api.md"
+  ],
+  "adopt_safe": [
+    "docs/api.md",
+    ".clang-format",
+    ".clang-tidy"
+  ],
+  "skip_common": [
+    "Dockerfile",
+    "compose.yaml",
+    ".dockerignore"
+  ],
+  "makefile": "cpp-cmake.mk"
+}

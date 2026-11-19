@@ -46,3 +46,9 @@ is in active LTS support, as its release schedule states.
 
 Source to check before relying on details: the React, Vite, typescript-eslint,
 Vitest and Playwright documentation.
+
+## Deeper guide
+
+`references/idioms.md` covers how this language handles errors, concurrency,
+configuration, logging, testing, security and the container image, and where it
+differs from the others. Read it when you design or review more than a small edit.

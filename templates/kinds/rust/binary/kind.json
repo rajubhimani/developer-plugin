@@ -1,0 +1,17 @@
+{
+  "title": "Binary",
+  "summary": "A program (command line tool or service) with its logic in a library.",
+  "use_when": "The product is an executable; keep main thin so the logic is testable.",
+  "standalone": true,
+  "required": [
+    "Cargo.toml",
+    "src/main.rs",
+    "src/lib.rs",
+    "README.md"
+  ],
+  "adopt_safe": [],
+  "skip_common": [
+    "compose.yaml"
+  ],
+  "makefile": "rust.mk"
+}

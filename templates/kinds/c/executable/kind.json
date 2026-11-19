@@ -1,0 +1,23 @@
+{
+  "title": "Executable",
+  "summary": "A program with its logic in a library, so it can be tested.",
+  "use_when": "The product is a command or daemon; keep main thin.",
+  "standalone": true,
+  "required": [
+    "CMakeLists.txt",
+    "CMakePresets.json",
+    "src/main.c",
+    "src/{{package}}.c",
+    "src/{{package}}.h",
+    "tests/test_{{package}}.c",
+    "README.md"
+  ],
+  "adopt_safe": [
+    ".clang-format",
+    ".clang-tidy"
+  ],
+  "skip_common": [
+    "compose.yaml"
+  ],
+  "makefile": "c-cmake.mk"
+}

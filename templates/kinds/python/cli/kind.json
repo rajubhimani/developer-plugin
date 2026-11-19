@@ -1,0 +1,24 @@
+{
+  "title": "Command line tool",
+  "summary": "A program people run in a terminal, installed as a command.",
+  "use_when": "The product is a command (with options), not a server or an importable library.",
+  "standalone": true,
+  "required": [
+    "pyproject.toml",
+    "README.md",
+    "src/{{package}}/__init__.py",
+    "src/{{package}}/__main__.py",
+    "src/{{package}}/cli.py",
+    "tests"
+  ],
+  "adopt_safe": [
+    "src/{{package}}/__main__.py",
+    "tests/.gitkeep"
+  ],
+  "skip_common": [
+    "Dockerfile",
+    "compose.yaml",
+    ".dockerignore"
+  ],
+  "makefile": "python.mk"
+}

@@ -1,0 +1,7 @@
+# Each line: a path, then the people or teams who must review changes to it.
+# Replace the placeholders. Shared packages get the strictest review.
+*                 <default-owner>
+/apps/            <apps-owner>
+/packages/        <packages-owner>
+/.github/         <platform-owner>
+/docs/            <docs-owner>

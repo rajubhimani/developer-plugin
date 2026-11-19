@@ -41,3 +41,9 @@ compilers support, read the GCC and Clang release notes.
 
 Source to check before relying on details: the C standard working drafts, the
 GCC and Clang manuals, and the clang-tidy check list.
+
+## Deeper guide
+
+`references/idioms.md` covers how this language handles errors, concurrency,
+configuration, logging, testing, security and the container image, and where it
+differs from the others. Read it when you design or review more than a small edit.

@@ -1,5 +1,5 @@
 # Standard targets for a Python project (uv). See the project-make skill.
-.PHONY: help install format lint test check align build run docker-build clean
+.PHONY: help install format lint test check check-env align build run docker-build clean
 
 help: ## Show targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
@@ -18,7 +18,10 @@ lint: ## Lint and type-check without changing files
 test: ## Run tests
 	uv run pytest
 
-check: align lint test ## Gate before reporting work done
+check: align check-env lint test ## Gate before reporting work done
+
+check-env: ## Settings, .env.example and cluster config name the same variables
+	python3 scripts/check_env.py
 
 align: ## Check the project follows the plugin guidelines (tests/alignment)
 	python3 -m unittest discover -s tests/alignment -p 'test_*.py'
