@@ -112,7 +112,7 @@ def check_python_layers(root: Path, package: str, report: Report) -> None:
             bad = sorted({n for n in imports_of(file, src) for f in forbidden if under(n, f)})
             for name in bad[:3]:
                 report.fails.append(
-                    f"{file.relative_to(root)} imports {name}: {why}. Move the logic down a layer, or "
+                    f"{file.relative_to(root).as_posix()} imports {name}: {why}. Move the logic down a layer, or "
                     f"depend on a port (a Protocol) defined in services/ and implemented in adapters/.")
 
 
@@ -189,11 +189,11 @@ def check_python_monorepo(root: Path, profile: dict[str, object], report: Report
                 if other_is_app:
                     who = "an app" if is_app else "a package"
                     report.fails.append(
-                        f"{file.relative_to(root)} imports {name}: {who} must not import an app. "
+                        f"{file.relative_to(root).as_posix()} imports {name}: {who} must not import an app. "
                         f"Move the shared code into a package that both can use.")
                 elif name.count(".") >= 1 and any(part.startswith("_") for part in name.split(".")[1:]):
                     report.fails.append(
-                        f"{file.relative_to(root)} imports {name}: use the other package's public API "
+                        f"{file.relative_to(root).as_posix()} imports {name}: use the other package's public API "
                         f"(its __init__), not a private module.")
 
 
@@ -229,10 +229,10 @@ def check_node_monorepo(root: Path, profile: dict[str, object], report: Report) 
             if dep not in found:
                 continue
             if is_app[dep]:
-                report.fails.append(f"{folder.relative_to(root)}/package.json: {name} depends on app {dep}. "
+                report.fails.append(f"{folder.relative_to(root).as_posix()}/package.json: {name} depends on app {dep}. "
                                     f"Nothing may depend on an app; move shared code into a package.")
             if not spec.startswith("workspace:"):
-                report.warns.append(f"{folder.relative_to(root)}/package.json: {dep} is a sibling; use \"workspace:*\" "
+                report.warns.append(f"{folder.relative_to(root).as_posix()}/package.json: {dep} is a sibling; use \"workspace:*\" "
                                     f"so it always links the local copy")
     if (root / "package-lock.json").exists() or (root / "yarn.lock").exists():
         report.warns.append("a lock file other than pnpm-lock.yaml exists; use one package manager")
@@ -277,7 +277,7 @@ def check_go_monorepo(root: Path, profile: dict[str, object], report: Report) ->
             for file, text in texts.items():
                 if pattern.search(text):
                     who = "an app" if str(member["path"]).startswith("apps/") else "a package"
-                    report.fails.append(f"{file.relative_to(root)} imports {other['module']}: {who} must not import an app. "
+                    report.fails.append(f"{file.relative_to(root).as_posix()} imports {other['module']}: {who} must not import an app. "
                                         f"Move the shared code into a package that both can use.")
                     break
 
@@ -296,7 +296,7 @@ def check_cmake(root: Path, kind: str, report: Report) -> None:
     if kind == "library":
         for source in [*walk(root / "src", ".c"), *walk(root / "src", ".cpp")] if (root / "src").is_dir() else []:
             if re.search(r"(?m)^\s*int\s+main\s*\(", read_toml_text(source)):
-                report.fails.append(f"{source.relative_to(root)} defines main in a library; put the program in an executable target")
+                report.fails.append(f"{source.relative_to(root).as_posix()} defines main in a library; put the program in an executable target")
 
 
 JAVA_IMPORT = re.compile(r"(?m)^import\s+(?:static\s+)?([\w.]+)")
@@ -333,7 +333,7 @@ def check_java(root: Path, kind: str, report: Report) -> None:
         blocked = [f.format(pkg=base) for f in forbidden]
         for name in sorted(set(JAVA_IMPORT.findall(read_toml_text(file)))):
             if any(name == b or name.startswith(b + ".") or (b.endswith(".") and name.startswith(b)) for b in blocked):
-                report.fails.append(f"{file.relative_to(root)} imports {name}: {why}. "
+                report.fails.append(f"{file.relative_to(root).as_posix()} imports {name}: {why}. "
                                     f"Move the logic down a layer or depend on a port (an interface).")
                 break
 
@@ -349,7 +349,7 @@ def check_go(root: Path, kind: str, report: Report) -> None:
         for main in (root / "cmd").glob("*/main.go"):
             lines = len(read_toml_text(main).splitlines())
             if lines > 80:
-                report.warns.append(f"{main.relative_to(root)} has {lines} lines; keep main thin and put logic in internal/")
+                report.warns.append(f"{main.relative_to(root).as_posix()} has {lines} lines; keep main thin and put logic in internal/")
         if stray:
             report.warns.append(f"{stray[0].name}: package main at the root; move it to cmd/<name>/")
 
@@ -419,7 +419,7 @@ def check(root: Path) -> tuple[Report, dict[str, object] | None]:
         for file in [root / name, *root.glob(f"*/*/{name}")]:
             if file.is_file():
                 for found in sorted(set(PLACEHOLDER.findall(read_toml_text(file))))[:4]:
-                    report.todos.append(f"{file.relative_to(root)}: replace {found}")
+                    report.todos.append(f"{file.relative_to(root).as_posix()}: replace {found}")
     package = str(profile.get("package", ""))
     if language == "python":
         if kind == "monorepo":
