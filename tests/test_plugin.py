@@ -781,7 +781,7 @@ class MaintainedCodeTests(unittest.TestCase):
 
     def test_generated_python_projects_fail_on_deprecated_calls(self) -> None:
         for kind in ("library", "cli", "webapp", "monorepo"):
-            text = self.read("templates", "kinds", "python", kind, "files", "pyproject.toml")
+            text = self.read("templates", "kinds", "python", kind, "files", "pyproject.toml.tmpl")
             with self.subTest(kind=kind):
                 self.assertIn('reportDeprecated = "error"', text)
                 self.assertIn("error::DeprecationWarning", text)
@@ -806,7 +806,7 @@ class MaintainedCodeTests(unittest.TestCase):
         service = self.read("templates", "kinds", "java", "service", "files", "gradle", "libs.versions.toml")
         self.assertIn("spring-boot-starter-webmvc", service)
         self.assertNotIn("spring-boot-starter-web\"", service)  # deprecated in favour of webmvc
-        python_dev = self.read("templates", "kinds", "python", "webapp", "files", "pyproject.toml")
+        python_dev = self.read("templates", "kinds", "python", "webapp", "files", "pyproject.toml.tmpl")
         self.assertNotIn("dev-dependencies", python_dev)  # [dependency-groups] replaced it
 
 

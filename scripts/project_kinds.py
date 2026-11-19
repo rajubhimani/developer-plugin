@@ -158,7 +158,8 @@ def render_tree(kind: Kind, variables: dict[str, str], workspace: bool,
         files.update(tree(kind.path / "workspace_files"))
     rendered: dict[str, str] = {}
     for relative, source in files.items():
-        destination = fill(relative, variables)
+        # A .tmpl suffix keeps editors and tools from parsing a template as a real file.
+        destination = fill(relative.removesuffix(".tmpl"), variables)
         if workspace and destination.startswith(".github/"):
             continue  # GitHub reads workflows only from the repository root
         if only is not None and destination not in only:
