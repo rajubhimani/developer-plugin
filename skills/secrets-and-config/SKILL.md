@@ -1,6 +1,6 @@
 ---
 name: secrets-and-config
-description: Handling configuration and secrets safely, with config in the environment, secrets in a manager, least privilege, rotation, no secrets in code or images or logs, and what to do after a leak. Use when adding configuration, an API key or credential, an env file, or when a secret may have been exposed.
+description: Configuration and secrets: config in the environment, secrets in a manager, least privilege, rotation, nothing in code, images or logs, response to a leak. Use when adding configuration, a credential or an env file, or when a secret may be exposed.
 verified: 2026-11-19
 ---
 

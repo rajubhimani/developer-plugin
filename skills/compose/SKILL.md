@@ -1,6 +1,6 @@
 ---
 name: compose
-description: Docker Compose practice for local development and multi-service setups (Compose Specification files, healthchecks, dependency ordering, named volumes, profiles, watch mode, env files). Use when writing or changing compose.yaml or running several containers together.
+description: Docker Compose for local development and multi-service setups: healthchecks, dependency order, volumes, profiles, watch, env files. Use when writing or changing compose.yaml or running several containers together.
 verified: 2026-11-07
 ---
 

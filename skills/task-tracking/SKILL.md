@@ -1,6 +1,6 @@
 ---
 name: task-tracking
-description: How to create, move, list and read feature tasks in a project using the make task targets, including the UTC log and the by field. Use when asked what is in progress, completed, rejected or in backlog, or to create or change a task's status.
+description: Create, move, list and read feature tasks with the make task targets. Use when asked what is in progress, completed, rejected or in backlog, or to create or change a task's status.
 verified: 2026-11-07
 ---
 

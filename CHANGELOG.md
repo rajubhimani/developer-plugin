@@ -4,6 +4,15 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+- Leaner prompts. Skill and agent descriptions load into every session, so 52 of them are
+  shorter (what each covers and its "Use when" trigger are kept; the enumerated lists are
+  gone). Claude Code's own figure for the plugin's always-on cost fell from about 5,970 to
+  about 5,110 tokens. `ai-assisted-development` gains "Spend tokens wisely" (clear between
+  tasks, keep always-loaded text small and stable for prompt caching, turn off unused tools,
+  point instead of paste, match model and effort to the job, cap automated runs) and
+  `agent-handoff` gains a note on cheap dispatch. `make check` now fails on a description over
+  300 characters or a skill body over 500 lines, and `make token-cost` prints an estimate.
+
 - Shareable Claude Code install and a Claude installer that can be run at any time. Anyone can
   install with `/plugin install developer-plugin --marketplace rajubhimani/developer-plugin`;
   the marketplace is now named `developer-plugin` (was `developer-plugin-local`) with an owner,

@@ -1,6 +1,6 @@
 ---
 name: database-migrations
-description: Changing a database schema and its data safely with versioned migrations, the expand and contract pattern, backward-compatible steps, backfills and rollback plans. Use when adding, renaming or dropping columns or tables, changing types or constraints, backfilling data, or reviewing a migration.
+description: Safe schema and data changes: versioned migrations, expand and contract, backfills, rollback. Use when adding, renaming or dropping columns or tables, changing types or constraints, backfilling, or reviewing a migration.
 verified: 2026-11-19
 ---
 

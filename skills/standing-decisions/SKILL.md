@@ -1,6 +1,6 @@
 ---
 name: standing-decisions
-description: Record and respect decisions the user has already made, such as rejected tasks or chosen options, so they are not proposed again. Use when the user rejects an option or task, makes a choice, or when you are about to propose something that may already have been decided.
+description: Record decisions the user has made (rejected tasks, chosen options) so they are not proposed again. Use when the user rejects an option or makes a choice, or before proposing something that may be decided.
 verified: 2026-11-07
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: accessibility
-description: Building user interfaces that work for everyone, with semantic HTML, keyboard and focus support, text alternatives, colour contrast, labelled forms, motion limits and testing with tools plus manual checks against the current WCAG at level AA. Use when building or reviewing a web or app interface.
+description: Accessible interfaces: semantic HTML, keyboard and focus, text alternatives, contrast, labelled forms, WCAG AA testing. Use when building or reviewing a web or app interface.
 verified: 2026-11-19
 ---
 

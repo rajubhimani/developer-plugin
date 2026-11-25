@@ -1,6 +1,6 @@
 ---
 name: architecture-decisions
-description: Recording significant technical decisions as short decision records (context, options, decision, consequences) and organizing docs by purpose. Use when choosing a framework, pattern, data store or boundary, when reversing an earlier choice, or when asked why something is built the way it is.
+description: Short decision records (context, options, decision, consequences) and docs organised by purpose. Use when choosing a framework, pattern, data store or boundary, reversing a choice, or asked why something is built as it is.
 verified: 2026-11-19
 ---
 

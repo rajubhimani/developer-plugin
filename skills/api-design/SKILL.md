@@ -1,6 +1,6 @@
 ---
 name: api-design
-description: Designing HTTP and library APIs that stay predictable, including resource naming, status codes, problem-details errors, pagination, idempotency keys, filtering, versioning and compatibility. Use when adding or changing an endpoint, a response shape, or a public function.
+description: HTTP and library API design: naming, status codes, problem-details errors, pagination, idempotency, versioning. Use when adding or changing an endpoint, a response shape, or a public function.
 verified: 2026-11-19
 ---
 

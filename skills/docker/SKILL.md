@@ -1,6 +1,6 @@
 ---
 name: docker
-description: Container image practice (multi-stage Dockerfiles, pinned base images by digest, non-root users, secret-safe builds, healthchecks, image scanning, SBOM and provenance). Use when writing or reviewing a Dockerfile or building container images.
+description: Container images: multi-stage Dockerfiles, digest-pinned bases, non-root users, secret-safe builds, healthchecks, scanning. Use when writing or reviewing a Dockerfile or building images.
 verified: 2026-11-07
 ---
 

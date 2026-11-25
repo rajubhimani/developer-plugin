@@ -1,6 +1,6 @@
 ---
 name: versioning-release
-description: Versioning and release practice (semantic versioning, Keep a Changelog, release tags, release notes, deprecation before removal). Use when deciding a version number, updating the changelog, cutting a release, tagging, or planning a breaking change.
+description: Semantic versioning, Keep a Changelog, tags, release notes, deprecation before removal. Use when picking a version, updating the changelog, cutting a release, tagging, or planning a breaking change.
 verified: 2026-11-07
 ---
 

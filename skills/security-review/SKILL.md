@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: A security checklist for reviewing a diff or a design (secrets, injection, authorization, dependencies, logging, crypto, untrusted input). Use when reviewing a change that touches authentication, user data, secrets, external input, dependencies or deployment.
+description: Security checklist for a diff or design: secrets, injection, authorization, dependencies, logging, crypto, untrusted input. Use when reviewing a change touching authentication, user data, secrets, external input, dependencies or deployment.
 verified: 2026-11-17
 ---
 

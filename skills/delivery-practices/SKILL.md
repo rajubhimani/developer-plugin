@@ -1,6 +1,6 @@
 ---
 name: delivery-practices
-description: Shipping software in small, safe, frequent steps with short-lived branches, small changes, feature flags, progressive rollout, fast rollback and the four delivery measures (lead time, deploy frequency, change failure rate, time to restore). Use when planning how to release a change, sizing a pull request, or reviewing delivery health.
+description: Ship in small, safe steps: short-lived branches, flags, progressive rollout, fast rollback, the four delivery measures. Use when planning a release, sizing a pull request, or reviewing delivery health.
 verified: 2026-11-19
 ---
 

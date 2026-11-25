@@ -21,6 +21,7 @@
 #   make init-project REPO=... LANG=... [KIND=... NAME=... MEMBERS=a:kind,b:kind MODULE=...]
 #   make structure-check REPO=... check a project's layout against its recorded kind
 #   make versions                 print the current stable release of common tools
+#   make token-cost               estimate what the plugin costs in context
 
 PY       := python3
 PLUGIN   := developer-plugin
@@ -30,7 +31,7 @@ PROJECTS ?=
 .DEFAULT_GOAL := help
 .PHONY: help test check validate sync-rules release releases install-claude uninstall-claude \
 	install-codex uninstall-codex install-antigravity uninstall-antigravity install-copilot \
-	install-all update-clis check-install navigator workspace versions init-project structure-check
+	install-all update-clis check-install navigator workspace versions init-project structure-check token-cost
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-22s %s\n", $$1, $$2}'
@@ -102,3 +103,6 @@ init-project: ## Copy standard files into REPO (LANG=python|go|rust|node|c|cpp|j
 structure-check: ## Check REPO's layout against its recorded project kind (read-only)
 	@test -n "$(REPO)" || { echo "usage: make structure-check REPO=<folder>"; exit 1; }
 	@$(PY) scripts/check_structure.py "$(REPO)"
+
+token-cost: ## Estimate what the plugin costs in context (always loaded versus on use)
+	@$(PY) scripts/token_cost.py

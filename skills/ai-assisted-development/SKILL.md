@@ -1,7 +1,7 @@
 ---
 name: ai-assisted-development
-description: Working well with AI coding assistants and agents, covering small scoped tasks, planning first, giving a test command, keeping context short, reviewing every diff as suspect, avoiding scope creep, and not trusting generated claims. Use when delegating code to an assistant, reviewing generated changes, or writing instructions for one.
-verified: 2026-11-19
+description: Working with AI coding assistants: scoped tasks, plan first, short context, token-efficient prompts, review every diff as suspect. Use when delegating code to an assistant, reviewing generated changes, or writing instructions for one.
+verified: 2026-11-25
 ---
 
 # Working with AI coding assistants
@@ -29,6 +29,32 @@ developer stays responsible for every line that merges.
 2. **Watch for scope creep** ("while I was here"): extra refactors, renamed files,
    new dependencies. Stop and split them out.
 3. **Do not let it weaken a test, a gate or a check** to get green. Fix the code.
+
+## Spend tokens wisely
+
+The whole conversation is sent again on every turn, so stale context costs on every
+message. What stays in context matters more than how short one reply is. Judge cost
+per finished task, not per call: a trimmed answer that forces a re-read is not cheaper.
+
+1. **One clear first prompt:** the task, the files, what done looks like. A vague
+   prompt costs retries. Ask for several compared approaches only when the decision
+   needs them; extra branches add reasoning cost without better results.
+2. **Clear between unrelated tasks.** Compact only at a task boundary, and say what
+   to keep. Carry facts in files.
+3. **Keep the always-loaded text small and stable.** Rules files, skill descriptions
+   and tool lists are paid for every turn. Put detail in skills and docs that load on
+   demand. Leave timestamps, in-progress notes and per-run text out of them, and do
+   not switch model, effort or tools mid-session; either one breaks prompt caching.
+4. **Turn off tools and servers you are not using;** their definitions are large.
+   Prefer a command line tool over a server when one exists.
+5. **Point, do not paste.** Name the file or symbol. Filter command output (grep,
+   head, a quiet flag) before it enters the chat. A script costs only its output.
+6. **Match the model and effort to the job:** the strongest for planning and hard
+   debugging, a mid-tier one to carry out a clear plan, a light one for searches and
+   lookups, default effort for routine work.
+7. **Send noisy work to a subagent** (searching many files, reading long logs) so only
+   the answer returns; shut idle helpers down.
+8. **Cap automated runs** with a turn or budget limit.
 
 ## Review as if a stranger wrote it
 

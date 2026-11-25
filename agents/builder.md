@@ -1,6 +1,6 @@
 ---
 name: builder
-description: Implements one task after its red tests exist: makes them pass, refactors while green, updates the docs for its change, and runs the checks, committing each step only when asked. Never edits a red test. Use to build a single planned task.
+description: Implements one task after its red tests exist: makes them pass, refactors while green, updates docs, runs the checks, commits only when asked. Never edits a red test. Use to build a single planned task.
 tools: Read, Grep, Glob, Bash, Write, Edit
 model: inherit
 skills:

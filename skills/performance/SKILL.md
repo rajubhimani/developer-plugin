@@ -1,6 +1,6 @@
 ---
 name: performance
-description: Finding and fixing performance problems by measuring first, setting a budget, profiling, fixing the biggest cost (queries, I/O, algorithms), caching with care, and guarding against regressions. Use when something is slow, before optimizing, when adding a hot path or cache, or when reviewing a performance claim.
+description: Fix performance by measuring first: budget, profiling, biggest cost, careful caching, regression guards. Use when something is slow, before optimizing, when adding a hot path or cache, or reviewing a performance claim.
 verified: 2026-11-19
 ---
 

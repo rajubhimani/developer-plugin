@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Independent, read-only review of a diff, branch or pull request for correctness, tests, clarity and test honesty. Use after a change is built and before it is merged, or when asked for a second opinion. Returns approved, changes-requested or needs-decision.
+description: Independent read-only review of a diff, branch or PR for correctness, tests, clarity and test honesty; returns approved, changes-requested or needs-decision. Use after a change is built and before merge, or for a second opinion.
 tools: Read, Grep, Glob, Bash
 model: inherit
 skills:

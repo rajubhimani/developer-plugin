@@ -1,6 +1,6 @@
 ---
 name: project-structure
-description: Choosing and applying the folder layout that fits what a project is meant to be (library, web app or service, command line tool, monorepo with apps and packages), asking the user once, and checking or fixing an existing project's structure. Use when starting a project, when the user says what they are building, when restructuring, or when asked whether a project follows best practice.
+description: Choose and apply the folder layout that fits the project (library, web app or service, CLI, monorepo), asking once, and check an existing project's structure. Use when starting a project, restructuring, or asked whether a project follows best practice.
 verified: 2026-11-19
 ---
 
