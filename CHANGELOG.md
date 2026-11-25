@@ -4,6 +4,8 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-25
+
 - Your project, your structure. In a folder that already holds code, `init_project.py` now asks
   once whether to follow best practice or keep the project's own structure (`--structure
   best-practice|own`; the default without a terminal is `own`, so an existing layout is never
