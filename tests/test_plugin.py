@@ -16,6 +16,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
@@ -1289,6 +1290,156 @@ def load_installer():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+class FakeClaude:
+    """A stand-in for the claude command that behaves like the real one where it matters.
+
+    It fails to add a marketplace whose folder is missing, and it deletes the folder of a
+    marketplace it removes when that folder is under its own managed directory.
+    """
+
+    def __init__(self, managed: Path) -> None:
+        self.managed = managed
+        self.marketplaces: dict[str, dict] = {}
+        self.plugins: dict[str, dict] = {}
+        self.calls: list[tuple[str, ...]] = []
+
+    def run(self, args: list[str], check: bool = True) -> None:
+        command = tuple(args[1:])
+        self.calls.append(command)
+        try:
+            self.handle(command)
+        except subprocess.CalledProcessError:
+            if check:
+                raise
+
+    def fail(self) -> None:
+        raise subprocess.CalledProcessError(1, "claude")
+
+    def handle(self, command: tuple[str, ...]) -> None:
+        match command:
+            case ("plugin", "marketplace", "add", path):
+                manifest = Path(path) / ".claude-plugin" / "marketplace.json"
+                if not manifest.exists():
+                    self.fail()
+                name = json.loads(manifest.read_text(encoding="utf-8"))["name"]
+                self.marketplaces[name] = {"name": name, "source": "directory", "path": path}
+            case ("plugin", "marketplace", "remove", name):
+                if name not in self.marketplaces:
+                    self.fail()
+                entry = self.marketplaces.pop(name)
+                folder = Path(entry.get("path", "")) if entry["source"] == "directory" else None
+                if folder is not None and self.managed in folder.parents and folder.exists():
+                    shutil.rmtree(folder)
+                self.plugins = {k: v for k, v in self.plugins.items() if not k.endswith(f"@{name}")}
+            case ("plugin", "marketplace", "update", name):
+                if name not in self.marketplaces:
+                    self.fail()
+            case ("plugin", "install", plugin_id):
+                _, _, market = plugin_id.partition("@")
+                entry = self.marketplaces.get(market)
+                if entry is None or entry["source"] != "directory" or not Path(entry["path"]).is_dir():
+                    self.fail()
+                version = json.loads((Path(entry["path"]) / "plugin.json").read_text(encoding="utf-8"))["version"]
+                self.plugins[plugin_id] = {"id": plugin_id, "version": version, "enabled": True}
+            case ("plugin", "uninstall", plugin_id):
+                if plugin_id not in self.plugins:
+                    self.fail()
+                del self.plugins[plugin_id]
+            case _:
+                raise AssertionError(f"unexpected claude command {command}")
+
+    def json(self, claude: str, *args: str) -> list[dict] | None:
+        if args == ("plugin", "list", "--json"):
+            return list(self.plugins.values())
+        if args == ("plugin", "marketplace", "list", "--json"):
+            return list(self.marketplaces.values())
+        raise AssertionError(f"unexpected claude query {args}")
+
+
+class ClaudeInstallTests(unittest.TestCase):
+    """The Claude installer can be run at any time, in any starting state, and ends installed."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        root = Path(self.tmp.name)
+        self.module = load_installer()
+        self.copy = root / "own" / "claude"
+        self.legacy = root / "claude" / "marketplaces" / "developer-plugin-local"
+        self.fake = FakeClaude(managed=root / "claude" / "marketplaces")
+        for name, value in (("tool", lambda name: "claude"), ("run", self.fake.run),
+                            ("claude_json", self.fake.json), ("claude_copy", lambda: self.copy),
+                            ("legacy_claude_copy", lambda: self.legacy)):
+            patcher = mock.patch.object(self.module, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.plugin_id = "developer-plugin@developer-plugin"
+
+    def installed(self) -> dict:
+        return self.fake.plugins.get(self.plugin_id, {})
+
+    def test_installs_from_nothing(self) -> None:
+        self.module.install_claude(ref=None)
+        self.assertTrue(self.installed()["enabled"])
+        self.assertEqual(self.fake.marketplaces["developer-plugin"]["path"], str(self.copy))
+
+    def test_running_again_never_removes_the_marketplace(self) -> None:
+        self.module.install_claude(ref=None)
+        self.fake.calls.clear()
+        self.module.install_claude(ref=None)
+        self.assertTrue(self.installed()["enabled"])
+        self.assertNotIn(("plugin", "marketplace", "remove", "developer-plugin"), self.fake.calls)
+        self.assertTrue(self.copy.is_dir())
+
+    def test_an_earlier_install_is_migrated(self) -> None:
+        self.legacy.mkdir(parents=True)
+        (self.legacy / ".claude-plugin").mkdir()
+        (self.legacy / ".claude-plugin" / "marketplace.json").write_text('{"name": "developer-plugin-local"}')
+        (self.legacy / self.module.MARKER).write_text("{}")
+        self.fake.marketplaces["developer-plugin-local"] = {
+            "name": "developer-plugin-local", "source": "directory", "path": str(self.legacy)}
+        self.fake.plugins["developer-plugin@developer-plugin-local"] = {
+            "id": "developer-plugin@developer-plugin-local", "version": "0.0.1", "enabled": True}
+        self.module.install_claude(ref=None)
+        self.assertNotIn("developer-plugin-local", self.fake.marketplaces)
+        self.assertNotIn("developer-plugin@developer-plugin-local", self.fake.plugins)
+        self.assertFalse(self.legacy.exists())
+        self.assertTrue(self.installed()["enabled"])
+
+    def test_a_github_marketplace_is_switched_to_the_local_copy(self) -> None:
+        self.fake.marketplaces["developer-plugin"] = {
+            "name": "developer-plugin", "source": "github", "repo": "rajubhimani/developer-plugin"}
+        self.module.install_claude(ref=None)
+        self.assertEqual(self.fake.marketplaces["developer-plugin"]["source"], "directory")
+        self.assertTrue(self.installed()["enabled"])
+
+    def test_a_wrong_end_state_is_reported(self) -> None:
+        original = self.fake.handle
+
+        def refuse(command: tuple[str, ...]) -> None:
+            original(command)
+            if command[:2] == ("plugin", "install"):
+                self.fake.plugins[command[2]]["enabled"] = False
+
+        with mock.patch.object(self.fake, "handle", refuse), self.assertRaises(SystemExit) as raised:
+            self.module.install_claude(ref=None)
+        self.assertIn("did not finish", str(raised.exception))
+
+    def test_uninstall_removes_ours_and_leaves_a_github_marketplace(self) -> None:
+        self.module.install_claude(ref=None)
+        self.module.uninstall_claude()
+        self.assertEqual((self.fake.plugins, self.fake.marketplaces, self.copy.exists()), ({}, {}, False))
+        self.fake.marketplaces["developer-plugin"] = {
+            "name": "developer-plugin", "source": "github", "repo": "rajubhimani/developer-plugin"}
+        self.module.uninstall_claude()
+        self.assertIn("developer-plugin", self.fake.marketplaces)
+
+    def test_the_installer_and_the_published_marketplace_agree(self) -> None:
+        market = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+        self.assertEqual(market["name"], self.module.CLAUDE_MARKETPLACE)
+        self.assertEqual(market["plugins"][0]["name"], self.module.PLUGIN)
 
 
 class InstallManifestTests(unittest.TestCase):

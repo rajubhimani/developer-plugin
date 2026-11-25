@@ -39,14 +39,25 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PLUGIN = "developer-plugin"
-MARKETPLACE = "developer-plugin-local"
+MARKETPLACE = "developer-plugin-local"          # Codex's local marketplace
+CLAUDE_MARKETPLACE = "developer-plugin"          # same name as .claude-plugin/marketplace.json
+LEGACY_CLAUDE_MARKETPLACE = "developer-plugin-local"  # earlier Claude installs
 MARKER = ".installed-by-developer-plugin"
 COPY_IGNORE = shutil.ignore_patterns(".git", "build", ".DS_Store", "__pycache__", ".pytest_cache")
 
 
 def claude_copy() -> Path:
-    """Where Claude Code keeps this plugin's marketplace copy."""
-    return Path.home() / ".claude" / "plugins" / "marketplaces" / MARKETPLACE
+    """Where this installer keeps the copy Claude Code's marketplace reads.
+
+    It is outside Claude's own plugin folders on purpose: Claude deletes the folder of
+    a marketplace it removes, and an installer must never lose its copy that way.
+    """
+    return Path.home() / ".developer-plugin" / "claude"
+
+
+def legacy_claude_copy() -> Path:
+    """Where earlier versions of this installer kept the copy (inside Claude's folders)."""
+    return Path.home() / ".claude" / "plugins" / "marketplaces" / LEGACY_CLAUDE_MARKETPLACE
 
 
 def codex_copy() -> Path:
@@ -295,8 +306,39 @@ def skip(client: str, reason: str) -> None:
     print(f"{client}: {reason}, skipping")
 
 
+def claude_json(claude: str, *args: str) -> list[dict] | None:
+    """Run a claude command that prints JSON and return the list, or None if it failed."""
+    done = subprocess.run([claude, *args], capture_output=True, text=True, check=False)
+    if done.returncode != 0:
+        return None
+    try:
+        data = json.loads(done.stdout)
+    except ValueError:
+        return None
+    return data if isinstance(data, list) else None
+
+
+def migrate_legacy_claude(claude: str) -> None:
+    """Remove an earlier install that kept its copy inside Claude's folders."""
+    legacy_id = f"{PLUGIN}@{LEGACY_CLAUDE_MARKETPLACE}"
+    if any(item.get("id") == legacy_id for item in claude_json(claude, "plugin", "list", "--json") or []):
+        print(f"claude: replacing the earlier install {legacy_id}")
+        run([claude, "plugin", "uninstall", legacy_id], check=False)
+    if any(item.get("name") == LEGACY_CLAUDE_MARKETPLACE
+           for item in claude_json(claude, "plugin", "marketplace", "list", "--json") or []):
+        run([claude, "plugin", "marketplace", "remove", LEGACY_CLAUDE_MARKETPLACE], check=False)
+    legacy = legacy_claude_copy()
+    if (legacy / MARKER).exists():
+        shutil.rmtree(legacy)
+
+
 def install_claude(ref: str | None, dry_run: bool = False, confirm_update: bool = False) -> None:
-    """Install into Claude Code from its own copy."""
+    """Install into Claude Code from this installer's own copy.
+
+    Safe to run again at any point: it registers the marketplace only when it is missing
+    or points elsewhere, never removes it otherwise, reinstalls the plugin so a changed
+    copy is picked up even at the same version, and checks the result at the end.
+    """
     claude = tool("claude")
     if claude is None:
         return skip(client="claude", reason="not installed")
@@ -304,11 +346,28 @@ def install_claude(ref: str | None, dry_run: bool = False, confirm_update: bool 
     export(dest=dest, ref=ref, dry_run=dry_run, confirm_update=confirm_update)
     if dry_run:
         return
-    run([claude, "plugin", "uninstall", f"{PLUGIN}@{MARKETPLACE}"], check=False)
-    run([claude, "plugin", "marketplace", "remove", MARKETPLACE], check=False)
-    run([claude, "plugin", "marketplace", "add", str(dest)])
-    run([claude, "plugin", "install", f"{PLUGIN}@{MARKETPLACE}"])
-    print("claude: installed. Start a new session and run /plugin to confirm.")
+    migrate_legacy_claude(claude)
+    plugin_id = f"{PLUGIN}@{CLAUDE_MARKETPLACE}"
+    listed = {item.get("name"): item for item in claude_json(claude, "plugin", "marketplace", "list", "--json") or []}
+    entry = listed.get(CLAUDE_MARKETPLACE)
+    if entry is not None and not (entry.get("source") == "directory"
+                                  and Path(str(entry.get("path", ""))).resolve() == dest.resolve()):
+        print(f"claude: marketplace {CLAUDE_MARKETPLACE} is registered from another source; switching it to {dest}")
+        run([claude, "plugin", "marketplace", "remove", CLAUDE_MARKETPLACE])
+        entry = None
+    if entry is None:
+        run([claude, "plugin", "marketplace", "add", str(dest)])
+    else:
+        run([claude, "plugin", "marketplace", "update", CLAUDE_MARKETPLACE])
+    if any(item.get("id") == plugin_id for item in claude_json(claude, "plugin", "list", "--json") or []):
+        run([claude, "plugin", "uninstall", plugin_id])  # reinstall: Claude caches by version
+    run([claude, "plugin", "install", plugin_id])
+    found = [item for item in claude_json(claude, "plugin", "list", "--json") or [] if item.get("id") == plugin_id]
+    expected = plugin_version(dest)
+    if not found or not found[0].get("enabled", False) or found[0].get("version") != expected:
+        raise SystemExit(f"claude: the install did not finish as expected (wanted {plugin_id} {expected}, enabled). "
+                         f"Run 'claude plugin list' to see its state, then run this installer again.")
+    print(f"claude: {plugin_id} {expected} installed and enabled. Start a new session and run /plugin to confirm.")
 
 
 def install_codex(ref: str | None, dry_run: bool = False, confirm_update: bool = False) -> None:
@@ -382,11 +441,17 @@ def git_remote() -> str:
 
 
 def uninstall_claude() -> None:
-    """Remove the Claude Code install and its copy, if this installer made it."""
+    """Remove the Claude Code install and the copy, if this installer made them."""
     claude = tool("claude")
     if claude is not None:
-        run([claude, "plugin", "uninstall", f"{PLUGIN}@{MARKETPLACE}"], check=False)
-        run([claude, "plugin", "marketplace", "remove", MARKETPLACE], check=False)
+        run([claude, "plugin", "uninstall", f"{PLUGIN}@{CLAUDE_MARKETPLACE}"], check=False)
+        copy = claude_copy()
+        for item in claude_json(claude, "plugin", "marketplace", "list", "--json") or []:
+            # Only a marketplace this installer registered; a GitHub-sourced one is the user's own.
+            if item.get("name") == CLAUDE_MARKETPLACE and item.get("source") == "directory" \
+                    and Path(str(item.get("path", ""))).resolve() == copy.resolve():
+                run([claude, "plugin", "marketplace", "remove", CLAUDE_MARKETPLACE], check=False)
+        migrate_legacy_claude(claude)
     copy = claude_copy()
     if (copy / MARKER).exists():
         shutil.rmtree(copy)
@@ -434,6 +499,9 @@ COPIES = {"claude": claude_copy,
 def check_copy(client: str, current: dict[str, str], version: str) -> str:
     """Report how one client's copy differs from this checkout. Return ok, drift, none or corrupt."""
     dest = COPIES[client]()
+    if client == "claude" and not (dest / MARKER).exists() and (legacy_claude_copy() / MARKER).exists():
+        print("claude: an earlier install is in place. Run: python3 scripts/install.py claude (it migrates it).")
+        return "drift"
     if not (dest / MARKER).exists():
         print(f"{client}: not installed (no copy at {dest})")
         return "none"

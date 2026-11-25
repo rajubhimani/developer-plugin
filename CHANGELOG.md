@@ -4,6 +4,17 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+- Shareable Claude Code install and a Claude installer that can be run at any time. Anyone can
+  install with `/plugin install developer-plugin --marketplace rajubhimani/developer-plugin`;
+  the marketplace is now named `developer-plugin` (was `developer-plugin-local`) with an owner,
+  a description, and an author, homepage and repository on the plugin, and `make check`
+  enforces them. `scripts/install.py claude` keeps its copy in `~/.developer-plugin/claude`
+  instead of inside Claude's own folders (Claude deletes a removed marketplace's folder, which
+  made a re-install fail on the first try), never removes a marketplace except to change its
+  source, reinstalls the plugin so a same-version change is picked up, migrates an earlier
+  install, and checks at the end that the plugin is enabled at the expected version. Tests run
+  the installer against a stand-in `claude` that deletes a removed marketplace's folder.
+
 - Maintained libraries and no deprecated code, as standing rules. The core standards gain
   "Maintained code" (rules 23 to 25): choose maintained libraries and replace one that stops
   being maintained; replace a deprecated API, option or dependency when you find it, as its

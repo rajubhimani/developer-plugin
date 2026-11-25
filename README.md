@@ -11,6 +11,23 @@ See [docs/CLIENTS.md](docs/CLIENTS.md) for the status of each.
 | GitHub Copilot | `plugin.json` (root) | `skills/` | rules not generated yet |
 | Antigravity | `plugin.json` (root) | `skills/` | `rules/AGENTS.md`; `hooks.json` at root |
 
+## Install
+
+**Claude Code** (a current release), one step, from GitHub:
+
+```
+/plugin install developer-plugin --marketplace rajubhimani/developer-plugin
+```
+
+Or from a terminal: `claude plugin marketplace add rajubhimani/developer-plugin`, then
+`claude plugin install developer-plugin@developer-plugin`. To update later:
+`claude plugin marketplace update developer-plugin`, then
+`claude plugin update developer-plugin`. Pin a released version with a tag.
+
+**Codex, Antigravity, Copilot, or a checkout you are changing:** clone the repo and run
+`make install-all` (or `python3 scripts/install.py <client>` where `make` is missing,
+for example on Windows). See "Installing and testing" below.
+
 ## Layout
 
 ```text
@@ -206,8 +223,9 @@ so run the validator.
 
 ## Installing and testing
 
-Each installer copies the plugin into the client's own folder. Changes in this
-repo reach a client after you re-run its installer.
+For working on the plugin itself, or for clients other than Claude Code, each
+installer copies the plugin into a folder of its own. Changes in this repo reach a client
+after you re-run its installer. Every installer is safe to run again at any time.
 
 - `make install-claude` (or `install-codex`, `install-antigravity`, `install-copilot`)
 - `make install-all` runs every installer that is available.
@@ -223,7 +241,13 @@ repo reach a client after you re-run its installer.
 - An install stops before a downgrade or a major version step and asks for a
   typed `yes`. With no terminal it writes nothing; add `CONFIRM=1`
   (`--confirm-update`) to allow it.
-- `make uninstall-claude` and `make uninstall-antigravity` remove what the installers made.
+- `make uninstall-claude`, `uninstall-codex` and `uninstall-antigravity` remove what the
+  installers made (and nothing else).
+- The Claude installer keeps its copy in `~/.developer-plugin/claude`, registers it as the
+  marketplace, reinstalls the plugin, and checks at the end that it is enabled at the right
+  version. An install made by an earlier version of this installer is migrated on the next run.
+  If the marketplace was added from GitHub, the installer switches it to the local copy and
+  says so; `claude plugin marketplace add rajubhimani/developer-plugin` switches it back.
 - Copilot installs from the git remote, so it gets the pushed default branch.
 
 ### Windows, macOS and Linux

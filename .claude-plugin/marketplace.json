@@ -1,11 +1,19 @@
 {
-  "name": "developer-plugin-local",
-  "owner": { "name": "local" },
+  "name": "developer-plugin",
+  "owner": {
+    "name": "Raju Bhimani",
+    "url": "https://github.com/rajubhimani"
+  },
+  "metadata": {
+    "description": "Developer skills, rules and agents for Claude Code, Codex, Antigravity and GitHub Copilot."
+  },
   "plugins": [
     {
       "name": "developer-plugin",
       "source": "./",
-      "description": "Shared skills for Claude Code, Codex, Antigravity and GitHub Copilot."
+      "description": "Shared skills, rules and agents for coding standards, project setup, review, Docker, Kubernetes and more.",
+      "homepage": "https://github.com/rajubhimani/developer-plugin",
+      "category": "development"
     }
   ]
 }

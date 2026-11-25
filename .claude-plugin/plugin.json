@@ -1,5 +1,11 @@
 {
   "name": "developer-plugin",
   "version": "0.1.0",
-  "description": "One plugin with shared skills for Claude Code, Codex, Antigravity and GitHub Copilot."
+  "description": "One plugin with shared skills for Claude Code, Codex, Antigravity and GitHub Copilot.",
+  "author": {
+    "name": "Raju Bhimani",
+    "url": "https://github.com/rajubhimani"
+  },
+  "homepage": "https://github.com/rajubhimani/developer-plugin",
+  "repository": "https://github.com/rajubhimani/developer-plugin"
 }
