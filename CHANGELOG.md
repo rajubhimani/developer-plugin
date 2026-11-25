@@ -4,6 +4,17 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+- Your project, your structure. In a folder that already holds code, `init_project.py` now asks
+  once whether to follow best practice or keep the project's own structure (`--structure
+  best-practice|own`; the default without a terminal is `own`, so an existing layout is never
+  imposed). `own` records what was found and the conventions in `docs/project-structure.md`,
+  points `AGENTS.md` at it, creates no source folders, and `make structure-check` stops
+  enforcing a layout. `best-practice` writes `docs/structure-plan.md`, a checklist of what
+  differs, to be done in approved, tested steps. The choice is recorded as `structure` and can
+  be switched later. A new, empty folder still gets the recommended layout. The
+  `project-structure` and `project-setup` skills tell agents to ask and to honour the answer.
+  Existing projects initialised before this keep behaving as best practice until re-run.
+
 - Leaner prompts. Skill and agent descriptions load into every session, so 52 of them are
   shorter (what each covers and its "Use when" trigger are kept; the enumerated lists are
   gone). Claude Code's own figure for the plugin's always-on cost fell from about 5,970 to

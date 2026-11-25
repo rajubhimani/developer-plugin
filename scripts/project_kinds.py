@@ -226,6 +226,113 @@ def detect_package(repo: Path, fallback: str) -> str:
     return flat[0] if len(flat) == 1 else fallback
 
 
+STRUCTURES = ("best-practice", "own")
+NOTE_FILE = "docs/project-structure.md"
+PLAN_FILE = "docs/structure-plan.md"
+SKIP_FOLDERS = {"node_modules", "target", "build", "dist", "vendor", "venv", "env", "__pycache__", "site-packages"}
+TEST_FOLDERS = ("tests", "test", "__tests__", "spec", "src/test")
+
+
+def describe_layout(repo: Path, language: str) -> list[str]:
+    """Return short facts about how an existing project is laid out, for the structure note."""
+    facts = []
+    folders = sorted(p.name for p in repo.iterdir()
+                     if p.is_dir() and not p.name.startswith(".") and p.name not in SKIP_FOLDERS)
+    facts.append("top-level folders: " + (", ".join(folders) if folders else "none"))
+    found = [name for name in MANIFESTS.get(language, ()) if (repo / name).exists()]
+    facts.append("manifest: " + (", ".join(found) if found else "none"))
+    if language == "python":
+        package = detect_package(repo, "")
+        if package and (repo / "src" / package).is_dir():
+            facts.append(f"layout: src layout, package `{package}` under src/")
+        elif package:
+            facts.append(f"layout: flat layout, package `{package}` beside the manifest")
+        else:
+            facts.append("layout: no single package found")
+    tests = [name for name in TEST_FOLDERS if (repo / name).is_dir()]
+    facts.append("tests: " + (", ".join(tests) if tests else "no test folder found"))
+    tooling = [name for name in ("Makefile", "Dockerfile", "compose.yaml", ".github/workflows", "AGENTS.md")
+               if (repo / name).exists()]
+    facts.append("already present: " + (", ".join(tooling) if tooling else "none of Makefile, Dockerfile, compose, CI, AGENTS.md"))
+    return facts
+
+
+def ask_structure(ask: Callable[[str], str], say: Callable[[str], None], language: str, kind_title: str,
+                  facts: list[str]) -> str:
+    """Ask whether to follow best practice or keep the project's own structure. Enter keeps it."""
+    say(f"This folder already holds a {language} project. What should the plugin do about its structure?")
+    for fact in facts:
+        say(f"  found: {fact}")
+    say(f"  1) best-practice  Move toward the recommended layout for a {kind_title}. The plugin lists what differs and")
+    say("                    writes a step-by-step plan; nothing is moved without your approval.")
+    say("  2) own            Keep the structure as it is. The plugin records it and works inside it (default).")
+    while True:
+        answer = ask("Choose 1-2 [2]: ").strip().lower()
+        if answer in ("", "2", "own"):
+            return "own"
+        if answer in ("1", "best-practice", "best practice", "best"):
+            return "best-practice"
+        say("  not a choice; try again")
+
+
+def structure_note(name: str, language: str, kind_title: str, facts: list[str]) -> str:
+    """Return the note that tells people and agents to work inside the project's own structure."""
+    found = "\n".join(f"- {fact}" for fact in facts)
+    return f"""# Project structure: {name}
+
+The owner chose to keep this project's own structure. This note is what the plugin and
+every agent follow. Edit it when a convention changes, so it stays true.
+
+## What was found ({language}, treated as a {kind_title})
+
+{found}
+
+## Conventions to follow
+
+- Put new code beside similar code; do not create a new top-level folder for one file.
+- Match the naming, error handling and test style already used nearby.
+- Put each test where the existing tests for that area live.
+- Do not move, rename or reorganise existing files as part of another change. If a move
+  would help, say so and let the owner decide.
+- Add to this list any rule the team already follows that is not obvious from the code.
+
+## What the plugin will not do here
+
+It will not enforce a layout (`make structure-check` only lists placeholders to fill), create
+source folders, or restructure code.
+
+## Switching to the recommended layout later
+
+Run the plugin's `init_project.py` again with `--structure best-practice`. It then writes
+`docs/structure-plan.md`, the steps to take; each step is its own approved, tested commit.
+"""
+
+
+def structure_plan(name: str, language: str, kind_title: str, fails: list[str], warns: list[str]) -> str:
+    """Return the step-by-step plan to reach the recommended layout, from the checker's findings."""
+    def rows(items: list[str]) -> str:
+        return "\n".join(f"- [ ] {item}" for item in items) or "- none"
+    return f"""# Structure plan: {name}
+
+The owner chose to move this {language} project toward the recommended layout for a {kind_title}.
+Nothing is moved until the owner approves each step. Do one step per commit, with the tests
+green before and after, and run `make structure-check` to see what is left (see the
+`project-structure` and `refactoring` skills).
+
+## Broken boundaries and missing files (do first)
+
+{rows(fails)}
+
+## Against advice
+
+{rows(warns)}
+
+## Done when
+
+`make structure-check` prints no FAIL and no WARN. Then delete this file.
+"""
+
+
 def intake(language: str, folder_name: str, ask: Callable[[str], str],
            say: Callable[[str], None]) -> dict[str, object] | None:
     """Ask what the project is. Returns {kind, name, members} or None when no kinds exist."""

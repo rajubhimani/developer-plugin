@@ -724,7 +724,7 @@ class ProjectKindTests(unittest.TestCase):
     def test_the_check_reports_what_an_adopted_project_needs_by_hand(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = self.existing_flat_library(tmp)
-            self.init(repo, "python", "--kind", "library", "--name", "mylib")
+            self.init(repo, "python", "--kind", "library", "--name", "mylib", "--structure", "best-practice")
             result = self.structure(repo)
             self.assertEqual(result.returncode, 1)
             self.assertIn("flat layout (package 'mylib' sits beside pyproject.toml)", result.stdout)
@@ -732,6 +732,102 @@ class ProjectKindTests(unittest.TestCase):
             self.assertIn("requirements.txt: legacy packaging file", result.stdout)
             self.assertIn("init never creates source files in an existing project", result.stdout)
             self.assertNotIn(str(repo), result.stdout, "messages use project-relative paths")
+
+    # ---- the owner decides: best practice, or keep the project's own structure ---------
+
+    def test_an_existing_project_keeps_its_own_structure_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self.existing_flat_library(tmp)
+            before = {p.relative_to(repo).as_posix(): p.read_bytes() for p in repo.rglob("*") if p.is_file()}
+            made = self.init(repo, "python", "--kind", "library", "--name", "mylib")
+            self.assertEqual(made.returncode, 0, made.stderr)
+            self.assertIn("run again with --structure best-practice", made.stdout)
+            profile = json.loads((repo / ".developer-plugin" / "project.json").read_text())
+            self.assertEqual((profile["structure"], profile["required"]), ("own", ["docs/project-structure.md"]))
+            self.assertFalse((repo / "src").exists(), "no folder is created beside the owner's layout")
+            for name, content in before.items():
+                self.assertEqual((repo / name).read_bytes(), content, f"{name} must be left as it was")
+            note = (repo / "docs" / "project-structure.md").read_text()
+            self.assertIn("flat layout, package `mylib`", note)
+            self.assertIn("do not move, rename or reorganise", note.lower())
+            self.assertIn("docs/project-structure.md", (repo / "AGENTS.md").read_text())
+            self.assertFalse((repo / "docs" / "structure-plan.md").exists())
+
+    def test_the_check_does_not_enforce_a_layout_on_an_owners_own_structure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self.existing_flat_library(tmp)
+            self.init(repo, "python", "--kind", "library", "--name", "mylib")
+            result = self.structure(repo)
+            self.assertEqual(result.returncode, 0, result.stdout)
+            self.assertNotIn("FAIL", result.stdout)
+            self.assertIn("own structure", result.stdout)
+            (repo / "docs" / "project-structure.md").unlink()
+            self.assertEqual(self.structure(repo).returncode, 1, "the note is the one required file")
+
+    def test_choosing_best_practice_writes_a_plan_and_moves_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self.existing_flat_library(tmp)
+            before = (repo / "mylib" / "__init__.py").read_bytes()
+            made = self.init(repo, "python", "--kind", "library", "--name", "mylib", "--structure", "best-practice")
+            self.assertEqual(made.returncode, 0, made.stderr)
+            profile = json.loads((repo / ".developer-plugin" / "project.json").read_text())
+            self.assertEqual(profile["structure"], "best-practice")
+            plan = (repo / "docs" / "structure-plan.md").read_text()
+            self.assertIn("- [ ]", plan)
+            self.assertIn("flat layout", plan)
+            self.assertEqual((repo / "mylib" / "__init__.py").read_bytes(), before)
+            self.assertFalse((repo / "src").exists())
+            self.assertFalse((repo / "docs" / "project-structure.md").exists())
+
+    def test_the_choice_can_be_switched_later(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self.existing_flat_library(tmp)
+            self.init(repo, "python", "--kind", "library", "--name", "mylib")
+            switched = self.init(repo, "python", "--structure", "best-practice")
+            self.assertEqual(switched.returncode, 0, switched.stderr)
+            self.assertIn("structure changed to best-practice", switched.stdout)
+            profile = json.loads((repo / ".developer-plugin" / "project.json").read_text())
+            self.assertEqual(profile["structure"], "best-practice")
+            self.assertTrue((repo / "docs" / "structure-plan.md").exists())
+            self.assertEqual(self.structure(repo).returncode, 1, "the recommended layout is enforced again")
+
+    def test_a_project_recorded_before_the_choice_existed_is_not_switched(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self.existing_flat_library(tmp)
+            self.init(repo, "python", "--kind", "library", "--name", "mylib", "--structure", "best-practice")
+            path = repo / ".developer-plugin" / "project.json"
+            legacy = json.loads(path.read_text())
+            del legacy["structure"]
+            path.write_text(json.dumps(legacy))
+            again = self.init(repo, "python")
+            self.assertEqual(again.returncode, 0, again.stderr)
+            self.assertNotIn("structure changed", again.stdout)
+            self.assertNotIn("structure", json.loads(path.read_text()))
+            self.assertEqual(self.structure(repo).returncode, 1, "still checked as best practice")
+
+    def test_a_new_empty_project_gets_the_recommended_layout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            made = self.init(Path(tmp), "python", "--kind", "library", "--name", "fresh")
+            self.assertEqual(made.returncode, 0, made.stderr)
+            profile = json.loads((Path(tmp) / ".developer-plugin" / "project.json").read_text())
+            self.assertEqual(profile["structure"], "best-practice")
+            self.assertTrue((Path(tmp) / "src" / "fresh" / "__init__.py").exists())
+
+    def test_an_unknown_structure_value_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            refused = self.init(Path(tmp), "python", "--kind", "library", "--structure", "whatever")
+            self.assertNotEqual(refused.returncode, 0)
+            self.assertFalse((Path(tmp) / ".developer-plugin").exists())
+
+    def test_the_question_defaults_to_keeping_the_structure(self) -> None:
+        import project_kinds as pk
+        said: list[str] = []
+        for answers, expected in ((["", ], "own"), (["2"], "own"), (["1"], "best-practice"),
+                                  (["best-practice"], "best-practice"), (["nonsense", "1"], "best-practice")):
+            replies = iter(answers)
+            self.assertEqual(pk.ask_structure(lambda _: next(replies), said.append, "python", "Library",
+                                              ["layout: flat"]), expected)
+        self.assertTrue(any("found: layout: flat" in line for line in said), "the answer is informed by what was found")
 
     def test_adopting_a_src_layout_project_may_add_the_typed_marker(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

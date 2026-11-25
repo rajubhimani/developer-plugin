@@ -187,9 +187,20 @@ make init-project REPO=../shop LANG=node KIND=monorepo NAME=shop MEMBERS=web:web
 make structure-check REPO=../my-lib      # read-only: FAIL, WARN, TODO
 ```
 
-In a terminal, leave `KIND` out to be asked. In a folder that already holds a project the
-kind is recorded and only safe files are added; code is never moved or replaced, and
-`make structure-check` says what to change by hand.
+In a terminal, leave `KIND` out to be asked.
+
+**Your project, your structure.** In a folder that already holds code, the plugin also asks
+whether to follow best practice or keep the structure you have (`STRUCTURE=best-practice|own`
+without a terminal; the default is `own`). The answer is recorded as `structure`.
+
+- **own:** nothing is moved and no source folder is created. `docs/project-structure.md`
+  records what was found and the conventions to follow, `AGENTS.md` tells every agent to read
+  it, and `make structure-check` lists only placeholders to fill.
+- **best-practice:** only safe files are added, and `docs/structure-plan.md` lists what differs
+  as a checklist. Each step is its own approved, tested commit.
+
+Either choice can be switched later by running init with the other value. A new, empty folder
+gets the recommended layout without the question.
 
 For Python, `make init-project` also copies a uv multi-stage `Dockerfile`, a Compose
 stack, `.env.example`, `.dockerignore` and `src/app/settings.py`, and `make check`
@@ -201,6 +212,18 @@ so a setting forgotten in one place is caught before it fails at start-up.
 
 The plugin uses semantic versions (MAJOR.MINOR.PATCH). All manifests share one
 version, and `CHANGELOG.md` has an `[Unreleased]` section for work in progress.
+
+Choose the level by what users see, from the commits since the last tag:
+
+| Change | Level |
+|---|---|
+| Breaks existing users (removed or renamed behaviour). Before the first stable release this may ship in a minor release, and the changelog says so | major |
+| New skill, rule, agent, project kind or option; anything users can now do | minor |
+| Fix, wording, trimming or tests only; nothing new for users | patch |
+
+Claude Code only delivers an update to people who installed from GitHub when the version
+changes, so every enhancement that should reach them ends with a release. Put each change
+under `[Unreleased]` as it lands, finish the branch with `make release`, then tag after merge.
 
 - `make release LEVEL=minor` (or `patch`, `major`) runs the checks, bumps the
   version in every manifest, and dates the Unreleased section. Then commit and tag

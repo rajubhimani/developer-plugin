@@ -18,7 +18,7 @@
 #   make releases                 list released versions (git tags)
 #   make navigator PROJECTS=...   rewrite the projects docs
 #   make workspace PROJECTS=...   create or refresh project docs
-#   make init-project REPO=... LANG=... [KIND=... NAME=... MEMBERS=a:kind,b:kind MODULE=...]
+#   make init-project REPO=... LANG=... [KIND=... NAME=... MEMBERS=a:kind,b:kind MODULE=... STRUCTURE=best-practice|own]
 #   make structure-check REPO=... check a project's layout against its recorded kind
 #   make versions                 print the current stable release of common tools
 #   make token-cost               estimate what the plugin costs in context
@@ -97,8 +97,8 @@ versions: ## Print the current stable release of common tools (live lookup)
 	@$(PY) scripts/check_versions.py
 
 init-project: ## Copy standard files into REPO (LANG=python|go|rust|node|c|cpp|java; KIND=library|webapp|... asks once in a terminal)
-	@test -n "$(REPO)" -a -n "$(LANG)" || { echo "usage: make init-project REPO=<folder> LANG=<language> [KIND=<kind> NAME=<name> MEMBERS=a:kind,b:kind MODULE=<go module>]"; exit 1; }
-	@$(PY) scripts/init_project.py "$(REPO)" "$(LANG)" $(if $(KIND),--kind "$(KIND)",) $(if $(NAME),--name "$(NAME)",) $(if $(MEMBERS),--members "$(MEMBERS)",) $(if $(MODULE),--module "$(MODULE)",)
+	@test -n "$(REPO)" -a -n "$(LANG)" || { echo "usage: make init-project REPO=<folder> LANG=<language> [KIND=<kind> NAME=<name> MEMBERS=a:kind,b:kind MODULE=<go module> STRUCTURE=best-practice|own]"; exit 1; }
+	@$(PY) scripts/init_project.py "$(REPO)" "$(LANG)" $(if $(KIND),--kind "$(KIND)",) $(if $(NAME),--name "$(NAME)",) $(if $(MEMBERS),--members "$(MEMBERS)",) $(if $(MODULE),--module "$(MODULE)",) $(if $(STRUCTURE),--structure "$(STRUCTURE)",)
 
 structure-check: ## Check REPO's layout against its recorded project kind (read-only)
 	@test -n "$(REPO)" || { echo "usage: make structure-check REPO=<folder>"; exit 1; }

@@ -1,7 +1,7 @@
 ---
 name: project-structure
 description: Choose and apply the folder layout that fits the project (library, web app or service, CLI, monorepo), asking once, and check an existing project's structure. Use when starting a project, restructuring, or asked whether a project follows best practice.
-verified: 2026-11-19
+verified: 2026-11-25
 ---
 
 # Project structure
@@ -28,9 +28,34 @@ Then run (from the plugin folder):
 make init-project REPO=<folder> LANG=<language> KIND=<kind> NAME=<name> [MEMBERS=a:kind,b:kind]
 ```
 
-In a terminal the script asks the same questions itself. The answer is recorded in
+If the folder already holds a project, also ask the structure question below. In a terminal
+the script asks the same questions itself. The answer is recorded in
 `.developer-plugin/project.json`; do not ask again. To change a recorded kind, explain the
 consequence, then delete that file and run again (existing files are kept).
+
+## Honour the project's own structure
+
+A project that already has code was laid out by someone for a reason. Never assume the
+recommended layout is wanted. Ask once, in one short question:
+
+> This project already has its own structure. Follow best practice (I list what differs
+> and we move step by step, with your approval), or keep your structure (I record it and
+> work inside it)?
+
+1. **Best practice:** run init with `STRUCTURE=best-practice`. It adds only safe files and
+   writes `docs/structure-plan.md`, a checklist from `make structure-check`. Do one item per
+   commit, with tests green before and after, and ask before each move that touches many
+   files (see `refactoring`).
+2. **Keep their structure:** run init with `STRUCTURE=own` (also the default with no
+   terminal). It writes `docs/project-structure.md` (what was found and the conventions to
+   follow) and an `AGENTS.md` that points at it, and `make structure-check` stops enforcing
+   a layout. Read that note before every change: put new code beside similar code, match the
+   naming and test style nearby, and never move or rename files as a side effect. When a
+   convention changes, update the note.
+
+The answer is recorded as `structure` in `.developer-plugin/project.json`; do not ask again.
+Either choice can be switched later by running init with the other value. A new, empty
+folder gets the recommended layout without the question.
 
 ## Kinds
 
@@ -76,9 +101,10 @@ consequence, then delete that file and run again (existing files are kept).
    made by the plugin). It is read-only and reports FAIL (broken layout), WARN (against
    advice) and TODO (placeholder to fill).
 2. If the project has no record, the check says what it looks like. Confirm the kind with
-   the user, then run `make init-project ... KIND=<kind>`. In a folder that already holds a
-   project this records the kind and adds only safe files (docs, owners file, tests
-   folder). It never creates source files and never moves or overwrites code.
+   the user, ask the structure question above, then run `make init-project ... KIND=<kind>
+   STRUCTURE=<choice>`. In a folder that already holds a project this records both answers
+   and adds only safe files (docs, owners file, tests folder). It never creates source files
+   and never moves or overwrites code.
 3. Report the findings in the order: broken boundaries, missing required files, layout
    moves, warnings. Moving code (a flat layout to `src`, splitting a package) is a
    refactor: propose it, get approval, do it in small steps with tests green (see
