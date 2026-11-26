@@ -1721,12 +1721,112 @@ class InstallManifestTests(unittest.TestCase):
         self.assertEqual(legacy.returncode, 2)
 
 
+class SurfaceTests(unittest.TestCase):
+    """The public surface decides the lowest version level, and removals need a warning first."""
+
+    def repo(self, version: str = "0.1.0") -> Path:
+        """Make a small tagged git repository holding a skill, an agent, a kind and a command."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        (root / "scripts").mkdir()
+        for name in ("release.py", "surface.py"):
+            shutil.copy(SCRIPTS / name, root / "scripts" / name)
+        (root / "skills" / "alpha").mkdir(parents=True)
+        (root / "skills" / "alpha" / "SKILL.md").write_text("---\nname: alpha\n---\n", encoding="utf-8")
+        (root / "agents").mkdir()
+        (root / "agents" / "worker.md").write_text("---\nname: worker\n---\n", encoding="utf-8")
+        (root / "templates" / "kinds" / "python" / "library").mkdir(parents=True)
+        (root / "templates" / "kinds" / "python" / "library" / "kind.json").write_text("{}", encoding="utf-8")
+        (root / "Makefile").write_text("check: ## Gate\n\ttrue\n", encoding="utf-8")
+        (root / "plugin.json").write_text(json.dumps({"name": "p", "version": version}), encoding="utf-8")
+        (root / ".claude-plugin").mkdir()
+        (root / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": "p", "version": version}), encoding="utf-8")
+        (root / "CHANGELOG.md").write_text("# Changelog\n\n## [Unreleased]\n\n- Something.\n", encoding="utf-8")
+        for args in (["init", "-q"], ["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q", "-m", "x"],
+                     ["tag", f"v{version}"]):
+            self.assertEqual(run(["git", "-C", str(root), *args]).returncode, 0)
+        return root
+
+    def surface(self, root: Path) -> subprocess.CompletedProcess:
+        return run([sys.executable, str(root / "scripts" / "surface.py")], cwd=root)
+
+    def level(self, root: Path) -> str:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("surface_under_test", root / "scripts" / "surface.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return str(module.compare(root)["floor"])
+
+    def test_nothing_new_allows_a_patch(self) -> None:
+        root = self.repo()
+        self.assertEqual(self.level(root), "patch")
+
+    def test_adding_a_skill_an_agent_a_kind_or_a_command_needs_a_minor(self) -> None:
+        for make in (lambda r: (r / "skills" / "beta").mkdir() or (r / "skills" / "beta" / "SKILL.md").write_text("x"),
+                     lambda r: (r / "agents" / "other.md").write_text("x"),
+                     lambda r: (r / "templates" / "kinds" / "go").mkdir() or (r / "templates" / "kinds" / "go" / "cli").mkdir()
+                     or (r / "templates" / "kinds" / "go" / "cli" / "kind.json").write_text("{}"),
+                     lambda r: (r / "Makefile").write_text("check: ## Gate\n\ttrue\nship: ## Ship\n\ttrue\n")):
+            root = self.repo()
+            make(root)
+            self.assertEqual(self.level(root), "minor")
+
+    def test_a_release_below_the_floor_is_refused_and_auto_picks_the_floor(self) -> None:
+        root = self.repo()
+        (root / "skills" / "beta").mkdir()
+        (root / "skills" / "beta" / "SKILL.md").write_text("x")
+        refused = run([sys.executable, str(root / "scripts" / "release.py"), "bump", "patch"], cwd=root)
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertIn("below the lowest level", refused.stderr)
+        self.assertEqual(json.loads((root / "plugin.json").read_text())["version"], "0.1.0", "nothing was written")
+        done = run([sys.executable, str(root / "scripts" / "release.py"), "bump", "auto", "--date", "2026-11-26"], cwd=root)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(json.loads((root / "plugin.json").read_text())["version"], "0.2.0")
+
+    def test_a_removal_fails_the_check_until_the_version_allows_it(self) -> None:
+        root = self.repo()
+        shutil.rmtree(root / "skills" / "alpha")
+        self.assertEqual(self.level(root), "minor", "before 1.0 a minor release may break things")
+        failed = run([sys.executable, str(root / "scripts" / "surface.py"), "--check"], cwd=root)
+        self.assertEqual(failed.returncode, 1)
+        self.assertIn("skill alpha removed since v0.1.0", failed.stdout)
+        for name in ("plugin.json", ".claude-plugin/plugin.json"):
+            (root / name).write_text(json.dumps({"name": "p", "version": "0.2.0"}))
+        self.assertEqual(run([sys.executable, str(root / "scripts" / "surface.py"), "--check"], cwd=root).returncode, 0)
+
+    def test_after_1_0_a_removal_needs_a_major(self) -> None:
+        root = self.repo(version="1.0.0")
+        (root / "agents" / "worker.md").unlink()
+        self.assertEqual(self.level(root), "major")
+        for name in ("plugin.json", ".claude-plugin/plugin.json"):
+            (root / name).write_text(json.dumps({"name": "p", "version": "1.1.0"}))
+        self.assertEqual(run([sys.executable, str(root / "scripts" / "surface.py"), "--check"], cwd=root).returncode, 1)
+        for name in ("plugin.json", ".claude-plugin/plugin.json"):
+            (root / name).write_text(json.dumps({"name": "p", "version": "2.0.0"}))
+        self.assertEqual(run([sys.executable, str(root / "scripts" / "surface.py"), "--check"], cwd=root).returncode, 0)
+
+    def test_with_no_release_tag_there_is_nothing_to_compare(self) -> None:
+        root = self.repo()
+        run(["git", "-C", str(root), "tag", "-d", "v0.1.0"])
+        result = self.surface(root)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("no release tag yet", result.stdout)
+        auto = run([sys.executable, str(root / "scripts" / "release.py"), "bump", "auto"], cwd=root)
+        self.assertNotEqual(auto.returncode, 0)
+        self.assertIn("no release tag yet", auto.stderr)
+
+    def test_the_real_plugin_passes_its_own_surface_check(self) -> None:
+        self.assertEqual(run([sys.executable, str(SCRIPTS / "surface.py"), "--check"]).returncode, 0)
+
+
 class VersioningTests(unittest.TestCase):
     """Versions, changelog sections, pinned CI actions and version-specific installs."""
 
     def fake_project(self, root: Path, changelog: str) -> None:
         (root / "scripts").mkdir()
         shutil.copy(SCRIPTS / "release.py", root / "scripts" / "release.py")
+        shutil.copy(SCRIPTS / "surface.py", root / "scripts" / "surface.py")
         (root / "plugin.json").write_text(json.dumps({"name": "developer-plugin", "version": "0.1.0"}), encoding="utf-8")
         (root / ".claude-plugin").mkdir()
         (root / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": "developer-plugin", "version": "0.1.0"}), encoding="utf-8")

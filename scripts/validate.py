@@ -6,6 +6,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import surface  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 MANIFESTS = [ROOT / "plugin.json", ROOT / ".claude-plugin" / "plugin.json"]
 MAX_AGE_DAYS = 90
@@ -127,6 +130,8 @@ def main() -> int:
                             "move the rest to Load on demand")
         if on_demand and "Skill" not in [t.strip() for t in fields.get("tools", "").split(",")]:
             problems.append(f"agents/{agent.stem}: has a Load on demand section but no Skill tool")
+
+    problems += surface.problems(ROOT)
 
     version_re = re.compile(r"(?<![\w.])\d+\.\d+(\.\d+)?(?![\w.])|\b(?:C|C\+\+)\d{2}\b|\bJDK ?\d+|\bJava \d+|\bPython 3\.\d+|\bNode\.?js? \d+|\bGo 1\.\d+")
     allowed = ("Agent Plugins 1.0",)  # a published specification's name, not a tool version

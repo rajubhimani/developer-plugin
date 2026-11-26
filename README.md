@@ -221,6 +221,14 @@ Choose the level by what users see, from the commits since the last tag:
 | New skill, rule, agent, project kind or option; anything users can now do | minor |
 | Fix, wording, trimming or tests only; nothing new for users | patch |
 
+You do not have to judge the level by eye. The public surface (skills, agents, project kinds
+and `make` commands) is compared with the last release tag: `make release-level` prints the
+lowest level the changes allow (something removed is major, or minor before the first stable
+release; something added is minor; otherwise patch), `make release LEVEL=auto` uses it, and a
+lower `LEVEL` is refused. A removal also needs one release of warning: list the element in
+`deprecations.json` with its successor, then remove it later. `make check` fails a removal the
+version does not allow. The comparison starts once the first `vX.Y.Z` tag exists.
+
 Claude Code only delivers an update to people who installed from GitHub when the version
 changes, so every enhancement that should reach them ends with a release. Put each change
 under `[Unreleased]` as it lands, finish the branch with `make release`, then tag after merge.

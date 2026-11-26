@@ -14,7 +14,8 @@
 #   make uninstall-claude         remove the Claude Code install and its copy
 #   make uninstall-codex          remove the Codex install and its copy
 #   make uninstall-antigravity    remove the Antigravity copy
-#   make release LEVEL=minor      bump the version and close the changelog section
+#   make release LEVEL=minor      bump the version and close the changelog section (LEVEL=auto picks the lowest allowed)
+#   make release-level            the lowest level the changes since the last tag allow
 #   make releases                 list released versions (git tags)
 #   make navigator PROJECTS=...   rewrite the projects docs
 #   make workspace PROJECTS=...   create or refresh project docs
@@ -29,7 +30,7 @@ REF_ARG   = $(if $(REF),--ref $(REF),) $(if $(DRY),--dry-run,) $(if $(CONFIRM),-
 PROJECTS ?=
 
 .DEFAULT_GOAL := help
-.PHONY: help test check validate sync-rules release releases install-claude uninstall-claude \
+.PHONY: help test check validate sync-rules release release-level releases install-claude uninstall-claude \
 	install-codex uninstall-codex install-antigravity uninstall-antigravity install-copilot \
 	install-all update-clis check-install navigator workspace versions init-project structure-check token-cost
 
@@ -49,8 +50,11 @@ check: ## Validate and test (the gate before a commit or release)
 sync-rules: ## Regenerate the skill and rules/AGENTS.md from rules/coding-standards.md
 	@$(PY) scripts/sync_rules.py
 
-release: validate test ## Bump the version: make release LEVEL=patch|minor|major
+release: validate test ## Bump the version: make release LEVEL=patch|minor|major|auto
 	@$(PY) scripts/release.py bump $(LEVEL)
+
+release-level: ## Show the lowest version level the changes since the last tag allow
+	@$(PY) scripts/release.py level
 
 releases: ## List released versions (git tags)
 	@git tag -l 'v*' --sort=-v:refname

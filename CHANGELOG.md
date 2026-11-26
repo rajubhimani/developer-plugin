@@ -4,6 +4,13 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+- The version level is now derived, not guessed. `scripts/surface.py` lists what users can name
+  (skills, agents, project kinds, make commands) and compares it with the last release tag:
+  `make release-level` prints the lowest level the changes allow, `make release LEVEL=auto` uses
+  it, and a lower level is refused. A removal needs a deprecation first (`deprecations.json`) or
+  a major release (a minor one before 1.0); `make check` fails one that has neither. CI now
+  fetches tags and history so the comparison can run.
+
 ## [0.2.0] - 2026-11-25
 
 - Your project, your structure. In a folder that already holds code, `init_project.py` now asks
