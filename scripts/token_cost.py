@@ -40,6 +40,21 @@ def main() -> int:
     always_total = sum(row[2] for row in rows)
     print(f"always loaded in every session: about {always_total} tokens "
           f"({sum(1 for r in rows if r[0] == 'skill')} skills, {sum(1 for r in rows if r[0] == 'agent')} agents)")
+    print("one dispatch of each agent (its prompt plus the skills it preloads):")
+    sizes = {name: body for kind, name, _, body in rows if kind == "skill"}
+    for path in sorted(ROOT.glob("agents/*.md")):
+        meta, text = fields(path)
+        block = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+        preload, grab = [], False
+        for line in (block.group(1).splitlines() if block else []):
+            if line.startswith("skills:"):
+                grab = True
+            elif grab and line.startswith("  - "):
+                preload.append(line.strip(" -"))
+            else:
+                grab = False
+        print(f"  {path.stem:<22} about {tokens(len(text)) + sum(sizes.get(n, 0) for n in preload)} tokens "
+              f"({len(preload)} skills preloaded)")
     print("largest when used:")
     for kind, name, _, body in sorted(rows, key=lambda row: -row[3])[:8]:
         print(f"  {name:<28} {kind:<6} about {body} tokens")

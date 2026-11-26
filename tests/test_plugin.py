@@ -907,6 +907,37 @@ class MaintainedCodeTests(unittest.TestCase):
         self.assertNotIn("dev-dependencies", python_dev)  # [dependency-groups] replaced it
 
 
+class LeanAgentTests(unittest.TestCase):
+    """Agents start small and load other skills on demand."""
+
+    def test_every_agent_can_load_the_skills_it_does_not_preload(self) -> None:
+        for path in sorted((ROOT / "agents").glob("*.md")):
+            with self.subTest(agent=path.stem):
+                text = path.read_text(encoding="utf-8")
+                self.assertIn("## Load on demand", text)
+                self.assertRegex(text.split("\n---\n")[0], r"(?m)^tools:.*\bSkill\b")
+
+    def test_no_agent_preloads_more_than_the_budget(self) -> None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("validate", SCRIPTS / "validate.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        for path in sorted((ROOT / "agents").glob("*.md")):
+            preload, _ = module.agent_skills(path)
+            weight = sum(len((ROOT / "skills" / n / "SKILL.md").read_text(encoding="utf-8")) // 4 for n in preload)
+            self.assertLessEqual(weight, module.MAX_PRELOAD_TOKENS, path.stem)
+
+    def test_validation_rejects_a_preload_over_the_budget(self) -> None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("validate", SCRIPTS / "validate.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as tmp:
+            agent = Path(tmp) / "x.md"
+            agent.write_text("---\nname: x\nskills:\n  - kubernetes\n  - lang-python\n---\n## Load on demand\n\n- `docker`: when needed.\n")
+            self.assertEqual(module.agent_skills(agent), (["kubernetes", "lang-python"], ["docker"]))
+
+
 class AgentTests(unittest.TestCase):
     """Agents are valid, use only skills that exist, and reviewers cannot edit."""
 
@@ -959,7 +990,10 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(names, self.ROLES)
         for path in self.AGENTS:
             with self.subTest(agent=path.stem):
-                self.assertIn("agent-handoff", self.fields(path).get("skills", []))
+                # Preloaded or loadable on demand: either way the agent can reach the report shape.
+                text = path.read_text(encoding="utf-8")
+                self.assertTrue("agent-handoff" in self.fields(path).get("skills", [])
+                                or "- `agent-handoff`:" in text, "the agent must be able to reach agent-handoff")
 
 
 class TemplateTests(unittest.TestCase):

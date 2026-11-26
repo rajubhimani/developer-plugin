@@ -11,6 +11,7 @@ MANIFESTS = [ROOT / "plugin.json", ROOT / ".claude-plugin" / "plugin.json"]
 MAX_AGE_DAYS = 90
 MAX_DESCRIPTION = 300  # characters; descriptions load into every session
 MAX_BODY_LINES = 500  # a skill body past this should move detail into references/
+MAX_PRELOAD_TOKENS = 3000  # skills an agent starts with, at about four characters a token
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 
@@ -33,6 +34,22 @@ def frontmatter(path: Path) -> dict:
         key, _, value = line.partition(":")
         fields[key.strip()] = value.strip()
     return fields
+
+
+def agent_skills(path: Path) -> tuple[list[str], list[str]]:
+    """Return (the skills an agent preloads, the skills its Load on demand section names)."""
+    text = path.read_text(encoding="utf-8")
+    block = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+    preload, grab = [], False
+    for line in (block.group(1).splitlines() if block else []):
+        if line.startswith("skills:"):
+            grab = True
+        elif grab and line.startswith("  - "):
+            preload.append(line.strip(" -"))
+        else:
+            grab = False
+    section = text.partition("## Load on demand")[2]
+    return preload, re.findall(r"(?m)^- `([a-z0-9-]+)`:", section)
 
 
 def main() -> int:
@@ -98,6 +115,18 @@ def main() -> int:
             problems.append(f"agents/{agent.stem}: tools must be listed explicitly")
         if "memory" in fields:
             problems.append(f"agents/{agent.stem}: no memory field; lasting notes live in files")
+        preload, on_demand = agent_skills(agent)
+        known = {p.parent.name for p in (ROOT / "skills").glob("*/SKILL.md")}
+        for name in [*preload, *on_demand]:
+            if name not in known:
+                problems.append(f"agents/{agent.stem}: names the skill '{name}', which does not exist")
+        weight = sum(len((ROOT / "skills" / n / "SKILL.md").read_text(encoding="utf-8")) // 4
+                     for n in preload if n in known)
+        if weight > MAX_PRELOAD_TOKENS:
+            problems.append(f"agents/{agent.stem}: preloads about {weight} tokens of skills (limit {MAX_PRELOAD_TOKENS}); "
+                            "move the rest to Load on demand")
+        if on_demand and "Skill" not in [t.strip() for t in fields.get("tools", "").split(",")]:
+            problems.append(f"agents/{agent.stem}: has a Load on demand section but no Skill tool")
 
     version_re = re.compile(r"(?<![\w.])\d+\.\d+(\.\d+)?(?![\w.])|\b(?:C|C\+\+)\d{2}\b|\bJDK ?\d+|\bJava \d+|\bPython 3\.\d+|\bNode\.?js? \d+|\bGo 1\.\d+")
     allowed = ("Agent Plugins 1.0",)  # a published specification's name, not a tool version
