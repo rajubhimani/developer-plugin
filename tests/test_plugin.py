@@ -813,6 +813,18 @@ class ProjectKindTests(unittest.TestCase):
             self.assertEqual(profile["structure"], "best-practice")
             self.assertTrue((Path(tmp) / "src" / "fresh" / "__init__.py").exists())
 
+    def test_projects_get_a_safe_starter_permissions_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(self.init(Path(tmp), "python", "--kind", "library", "--name", "fresh").returncode, 0)
+            data = json.loads((Path(tmp) / ".claude" / "settings.example.json").read_text())
+            allow = data["permissions"]["allow"]
+            self.assertIn("Bash(make check)", allow)
+            for entry in allow:
+                for risky in ("python -", "python3 -", "bash -c", "sh -c", "docker run", "docker exec", "node -e", "curl", "Bash(*)"):
+                    self.assertNotIn(risky, entry, f"{entry} could run text an attacker planted")
+                self.assertFalse(entry.endswith("(*)"), "no blanket wildcard")
+            self.assertIn("Bash(git push --force *)", data["permissions"]["deny"])
+
     def test_an_unknown_structure_value_is_refused(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             refused = self.init(Path(tmp), "python", "--kind", "library", "--structure", "whatever")

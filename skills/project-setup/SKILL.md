@@ -43,6 +43,15 @@ folder's root, with an index, a per-project folder and notes. It also writes a
 VS Code workspace file and `AGENTS.md`/`CLAUDE.md`. Run `make navigator` to
 refresh the index after repos change. The repos themselves are not changed.
 
+## Permissions
+
+The setup adds `.claude/settings.example.json`: a short allow list (`make check`, `make test`,
+`make lint`, read-only git) and a deny list, so routine commands stop asking. To use it, copy it
+to `.claude/settings.local.json` (untracked) or merge it into `.claude/settings.json`. It leaves
+out any stdin interpreter (`python -`, `bash -c`) and container exec or run, on purpose: an agent
+reads text from strangers (issues, web pages), and those commands turn a planted instruction into
+data leaving the machine. Add a project command only as a fixed command, never a `*` wildcard.
+
 ## After setup
 
 - Run `make check` to confirm the project passes. A new project is expected to

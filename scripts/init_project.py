@@ -85,6 +85,7 @@ def plan(language: str, kind: pk.Kind | None = None) -> list[tuple[Path, Path]]:
         (TEMPLATES / "github" / "pull_request_template.md", Path(".github/pull_request_template.md")),
         (TEMPLATES / "CHANGELOG.md", Path("CHANGELOG.md")),
     ]
+    pairs.append((TEMPLATES / "claude" / "settings.example.json", Path(".claude/settings.example.json")))
     pairs.append((ROOT / "scripts" / "tasks.py", Path("scripts/tasks.py")))
     pairs.append((ROOT / "skills" / "ci-cd" / "references" / "github-actions.yml",
                   Path(".github/workflows/ci.yml")))
