@@ -14,6 +14,7 @@ MANIFESTS = [ROOT / "plugin.json", ROOT / ".claude-plugin" / "plugin.json"]
 MAX_AGE_DAYS = 90
 MAX_DESCRIPTION = 300  # characters; descriptions load into every session
 MAX_BODY_LINES = 500  # a skill body past this should move detail into references/
+MAX_SKILL_BYTES = 20000  # Claude Code cuts a re-attached skill at 20,000 characters after compaction
 MAX_PRELOAD_TOKENS = 3000  # skills an agent starts with, at about four characters a token
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
@@ -95,6 +96,10 @@ def main() -> int:
         elif len(fields["description"]) > MAX_DESCRIPTION:
             problems.append(f"{folder}: description is {len(fields['description'])} characters; keep it under "
                             f"{MAX_DESCRIPTION} (it loads into every session)")
+        size = len(skill.read_bytes())
+        if size >= MAX_SKILL_BYTES:
+            problems.append(f"{folder}: SKILL.md is {size} bytes; keep it under {MAX_SKILL_BYTES} (Claude Code cuts a "
+                            "re-attached skill there after compaction). Move detail to references/")
         lines = len(skill.read_text(encoding="utf-8").splitlines())
         if lines > MAX_BODY_LINES:
             problems.append(f"{folder}: SKILL.md is {lines} lines; keep it under {MAX_BODY_LINES} and move detail to references/")

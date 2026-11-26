@@ -919,6 +919,19 @@ class MaintainedCodeTests(unittest.TestCase):
         self.assertNotIn("dev-dependencies", python_dev)  # [dependency-groups] replaced it
 
 
+class ManualSkillTests(unittest.TestCase):
+    """A skill only the person starts must stay out of the model's context."""
+
+    def test_handoff_is_manual_only(self) -> None:
+        text = (ROOT / "skills" / "handoff" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertRegex(text.split("\n---\n")[0], r"(?m)^disable-model-invocation: true$")
+
+    def test_no_skill_is_close_to_the_compaction_cut(self) -> None:
+        for path in (ROOT / "skills").glob("*/SKILL.md"):
+            with self.subTest(skill=path.parent.name):
+                self.assertLess(len(path.read_bytes()), 16000, "leave room before the 20,000 character cut")
+
+
 class LeanAgentTests(unittest.TestCase):
     """Agents start small and load other skills on demand."""
 

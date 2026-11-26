@@ -4,6 +4,12 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+- A `handoff` skill: write a short note so a fresh session can continue the work (goal, state, decisions,
+  where things are, how to check, next step), saved to the temp folder, never committed. It is manual-only
+  (`disable-model-invocation`), and a fresh session was confirmed not to see it, so it adds nothing to the
+  always-on cost. `make check` now also fails a skill file of 20,000 bytes or more, the point where Claude
+  Code cuts a re-attached skill after compaction.
+
 - Added the MIT licence (`LICENSE`, and `license` in both manifests, which `make check` now requires), so the
   plugin can be used and shared by others.
 
