@@ -51,7 +51,7 @@ def elements(paths: list[str], makefile: str) -> set[Element]:
         parts = path.split("/")
         if len(parts) == 3 and parts[0] == "skills" and parts[2] == "SKILL.md":
             found.add(("skill", parts[1]))
-        elif len(parts) == 2 and parts[0] == "agents" and parts[1].endswith(".md"):
+        elif len(parts) == 2 and parts[0] in ("agents", "claude-agents") and parts[1].endswith(".md"):  # moved in 0.3
             found.add(("agent", parts[1][:-3]))
         elif len(parts) == 5 and parts[:2] == ["templates", "kinds"] and parts[4] == "kind.json":
             found.add(("kind", f"{parts[2]}/{parts[3]}"))
@@ -64,7 +64,7 @@ def elements(paths: list[str], makefile: str) -> set[Element]:
 
 def tree_surface(root: Path = ROOT) -> set[Element]:
     """Return the surface of the working tree."""
-    paths = [p.relative_to(root).as_posix() for pattern in ("skills/*/SKILL.md", "agents/*.md", "templates/kinds/*/*/kind.json")
+    paths = [p.relative_to(root).as_posix() for pattern in ("skills/*/SKILL.md", "agents/*.md", "claude-agents/*.md", "templates/kinds/*/*/kind.json")
              for p in root.glob(pattern)]
     makefile = root / "Makefile"
     return elements(paths, makefile.read_text(encoding="utf-8") if makefile.is_file() else "")

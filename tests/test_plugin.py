@@ -883,10 +883,10 @@ class MaintainedCodeTests(unittest.TestCase):
         self.assertIn("Is it maintained?", self.read("skills", "dependency-management", "SKILL.md"))
         self.assertIn("Unmaintained and deprecated", self.read("skills", "dependency-management", "SKILL.md"))
         self.assertIn("Deprecations and dependencies", self.read("skills", "code-review-checklist", "SKILL.md"))
-        builder = self.read("agents", "builder.md")
+        builder = self.read("claude-agents", "builder.md")
         self.assertIn("Deprecations replaced", builder)
         self.assertIn("own commit", builder)
-        self.assertIn("deprecat", self.read("agents", "code-reviewer.md").lower())
+        self.assertIn("deprecat", self.read("claude-agents", "code-reviewer.md").lower())
 
     def test_generated_python_projects_fail_on_deprecated_calls(self) -> None:
         for kind in ("library", "cli", "webapp", "monorepo"):
@@ -917,6 +917,27 @@ class MaintainedCodeTests(unittest.TestCase):
         self.assertNotIn("spring-boot-starter-web\"", service)  # deprecated in favour of webmvc
         python_dev = self.read("templates", "kinds", "python", "webapp", "files", "pyproject.toml.tmpl")
         self.assertNotIn("dev-dependencies", python_dev)  # [dependency-groups] replaced it
+
+
+class GeminiManifestTests(unittest.TestCase):
+    """The Gemini extension manifest stays in step with the plugin manifests."""
+
+    def test_gemini_does_not_find_the_claude_format_agents(self) -> None:
+        # Gemini loads any agents/ folder in an extension and rejects Claude's format (tools string, skills key).
+        self.assertFalse((ROOT / "agents").exists())
+
+    def test_claude_lists_every_agent_file_explicitly(self) -> None:
+        manifest = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        on_disk = sorted(f"./claude-agents/{p.name}" for p in (ROOT / "claude-agents").glob("*.md"))
+        self.assertEqual(sorted(manifest["agents"]), on_disk)
+
+    def test_it_names_and_versions_the_same_plugin(self) -> None:
+        gemini = json.loads((ROOT / "gemini-extension.json").read_text(encoding="utf-8"))
+        plugin = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual((gemini["name"], gemini["version"]), (plugin["name"], plugin["version"]))
+
+    def test_a_release_bumps_it_too(self) -> None:
+        self.assertIn("gemini-extension.json", (SCRIPTS / "release.py").read_text(encoding="utf-8"))
 
 
 class EvalSuiteTests(unittest.TestCase):
@@ -1017,7 +1038,7 @@ class LeanAgentTests(unittest.TestCase):
     """Agents start small and load other skills on demand."""
 
     def test_every_agent_can_load_the_skills_it_does_not_preload(self) -> None:
-        for path in sorted((ROOT / "agents").glob("*.md")):
+        for path in sorted((ROOT / "claude-agents").glob("*.md")):
             with self.subTest(agent=path.stem):
                 text = path.read_text(encoding="utf-8")
                 self.assertIn("## Load on demand", text)
@@ -1028,7 +1049,7 @@ class LeanAgentTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("validate", SCRIPTS / "validate.py")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        for path in sorted((ROOT / "agents").glob("*.md")):
+        for path in sorted((ROOT / "claude-agents").glob("*.md")):
             preload, _ = module.agent_skills(path)
             weight = sum(len((ROOT / "skills" / n / "SKILL.md").read_text(encoding="utf-8")) // 4 for n in preload)
             self.assertLessEqual(weight, module.MAX_PRELOAD_TOKENS, path.stem)
@@ -1047,7 +1068,7 @@ class LeanAgentTests(unittest.TestCase):
 class AgentTests(unittest.TestCase):
     """Agents are valid, use only skills that exist, and reviewers cannot edit."""
 
-    AGENTS = sorted((ROOT / "agents").glob("*.md"))
+    AGENTS = sorted((ROOT / "claude-agents").glob("*.md"))
     READ_ONLY = ("code-reviewer", "security-reviewer", "deploy-reviewer", "debugger")
     ROLES = {"researcher", "requirements-analyst", "architect", "test-designer", "planner",
              "test-writer", "builder", "docs-writer", "code-reviewer", "security-reviewer",
@@ -1087,7 +1108,7 @@ class AgentTests(unittest.TestCase):
 
     def test_reviewers_and_the_debugger_are_read_only(self) -> None:
         for name in self.READ_ONLY:
-            tools = {t.strip() for t in self.fields(ROOT / "agents" / f"{name}.md")["tools"].split(",")}
+            tools = {t.strip() for t in self.fields(ROOT / "claude-agents" / f"{name}.md")["tools"].split(",")}
             with self.subTest(agent=name):
                 self.assertFalse(tools & {"Edit", "Write"}, "reviewers and the debugger cannot edit")
 
@@ -2037,12 +2058,13 @@ class SurfaceTests(unittest.TestCase):
             shutil.copy(SCRIPTS / name, root / "scripts" / name)
         (root / "skills" / "alpha").mkdir(parents=True)
         (root / "skills" / "alpha" / "SKILL.md").write_text("---\nname: alpha\n---\n", encoding="utf-8")
-        (root / "agents").mkdir()
-        (root / "agents" / "worker.md").write_text("---\nname: worker\n---\n", encoding="utf-8")
+        (root / "claude-agents").mkdir()
+        (root / "claude-agents" / "worker.md").write_text("---\nname: worker\n---\n", encoding="utf-8")
         (root / "templates" / "kinds" / "python" / "library").mkdir(parents=True)
         (root / "templates" / "kinds" / "python" / "library" / "kind.json").write_text("{}", encoding="utf-8")
         (root / "Makefile").write_text("check: ## Gate\n\ttrue\n", encoding="utf-8")
         (root / "plugin.json").write_text(json.dumps({"name": "p", "version": version}), encoding="utf-8")
+        (root / "gemini-extension.json").write_text(json.dumps({"name": "p", "version": version}), encoding="utf-8")
         (root / ".claude-plugin").mkdir()
         (root / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": "p", "version": version}), encoding="utf-8")
         (root / "CHANGELOG.md").write_text("# Changelog\n\n## [Unreleased]\n\n- Something.\n", encoding="utf-8")
@@ -2067,7 +2089,7 @@ class SurfaceTests(unittest.TestCase):
 
     def test_adding_a_skill_an_agent_a_kind_or_a_command_needs_a_minor(self) -> None:
         for make in (lambda r: (r / "skills" / "beta").mkdir() or (r / "skills" / "beta" / "SKILL.md").write_text("x"),
-                     lambda r: (r / "agents" / "other.md").write_text("x"),
+                     lambda r: (r / "claude-agents" / "other.md").write_text("x"),
                      lambda r: (r / "templates" / "kinds" / "go").mkdir() or (r / "templates" / "kinds" / "go" / "cli").mkdir()
                      or (r / "templates" / "kinds" / "go" / "cli" / "kind.json").write_text("{}"),
                      lambda r: (r / "Makefile").write_text("check: ## Gate\n\ttrue\nship: ## Ship\n\ttrue\n")):
@@ -2094,19 +2116,34 @@ class SurfaceTests(unittest.TestCase):
         failed = run([sys.executable, str(root / "scripts" / "surface.py"), "--check"], cwd=root)
         self.assertEqual(failed.returncode, 1)
         self.assertIn("skill alpha removed since v0.1.0", failed.stdout)
-        for name in ("plugin.json", ".claude-plugin/plugin.json"):
+        for name in ("plugin.json", ".claude-plugin/plugin.json", "gemini-extension.json"):
             (root / name).write_text(json.dumps({"name": "p", "version": "0.2.0"}))
         self.assertEqual(run([sys.executable, str(root / "scripts" / "surface.py"), "--check"], cwd=root).returncode, 0)
 
     def test_after_1_0_a_removal_needs_a_major(self) -> None:
         root = self.repo(version="1.0.0")
-        (root / "agents" / "worker.md").unlink()
+        (root / "claude-agents" / "worker.md").unlink()
         self.assertEqual(self.level(root), "major")
-        for name in ("plugin.json", ".claude-plugin/plugin.json"):
+        for name in ("plugin.json", ".claude-plugin/plugin.json", "gemini-extension.json"):
             (root / name).write_text(json.dumps({"name": "p", "version": "1.1.0"}))
         self.assertEqual(run([sys.executable, str(root / "scripts" / "surface.py"), "--check"], cwd=root).returncode, 1)
-        for name in ("plugin.json", ".claude-plugin/plugin.json"):
+        for name in ("plugin.json", ".claude-plugin/plugin.json", "gemini-extension.json"):
             (root / name).write_text(json.dumps({"name": "p", "version": "2.0.0"}))
+        self.assertEqual(run([sys.executable, str(root / "scripts" / "surface.py"), "--check"], cwd=root).returncode, 0)
+
+    def test_moving_agents_to_claude_agents_is_not_a_removal(self) -> None:
+        root = self.repo()
+        run(["git", "-C", str(root), "tag", "-d", "v0.1.0"])
+        (root / "agents").mkdir()
+        shutil.move(str(root / "claude-agents" / "worker.md"), str(root / "agents" / "worker.md"))
+        (root / "claude-agents").rmdir()
+        for args in (["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q", "-m", "old layout"],
+                     ["tag", "v0.1.0"]):
+            self.assertEqual(run(["git", "-C", str(root), *args]).returncode, 0)
+        (root / "claude-agents").mkdir()
+        shutil.move(str(root / "agents" / "worker.md"), str(root / "claude-agents" / "worker.md"))
+        (root / "agents").rmdir()
+        self.assertEqual(self.level(root), "patch", "the same agent in a new folder is not removed")
         self.assertEqual(run([sys.executable, str(root / "scripts" / "surface.py"), "--check"], cwd=root).returncode, 0)
 
     def test_with_no_release_tag_there_is_nothing_to_compare(self) -> None:
@@ -2131,6 +2168,7 @@ class VersioningTests(unittest.TestCase):
         shutil.copy(SCRIPTS / "release.py", root / "scripts" / "release.py")
         shutil.copy(SCRIPTS / "surface.py", root / "scripts" / "surface.py")
         (root / "plugin.json").write_text(json.dumps({"name": "developer-plugin", "version": "0.1.0"}), encoding="utf-8")
+        (root / "gemini-extension.json").write_text(json.dumps({"name": "developer-plugin", "version": "0.1.0"}), encoding="utf-8")
         (root / ".claude-plugin").mkdir()
         (root / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": "developer-plugin", "version": "0.1.0"}), encoding="utf-8")
         (root / "CHANGELOG.md").write_text(changelog, encoding="utf-8")

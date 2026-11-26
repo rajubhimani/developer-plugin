@@ -24,6 +24,9 @@ Or from a terminal: `claude plugin marketplace add rajubhimani/developer-plugin`
 `claude plugin marketplace update developer-plugin`, then
 `claude plugin update developer-plugin`. Pin a released version with a tag.
 
+**Gemini CLI:** `gemini extensions install https://github.com/rajubhimani/developer-plugin` gives it all the
+skills. (The twelve agents are Claude Code's format and are not offered to Gemini.)
+
 **Codex, Antigravity, Copilot, or a checkout you are changing:** clone the repo and run
 `make install-all` (or `python3 scripts/install.py <client>` where `make` is missing,
 for example on Windows). See "Installing and testing" below.
@@ -121,7 +124,8 @@ config flow, and a Kustomize layout.
 
 ## Agents
 
-Claude Code loads twelve subagents from `agents/`. Each is a role, not a
+Claude Code loads twelve subagents from `claude-agents/` (listed in `.claude-plugin/plugin.json`; the folder is
+named for its format so Gemini does not try to load them). Each is a role, not a
 product name, and follows the skills it lists. They are stateless: work moves
 between them as files, and the main session dispatches them, checks every
 report and asks the person at each gate. The `agent-handoff` skill holds the

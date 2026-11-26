@@ -8,5 +8,19 @@
   },
   "homepage": "https://github.com/rajubhimani/developer-plugin",
   "repository": "https://github.com/rajubhimani/developer-plugin",
-  "license": "MIT"
+  "license": "MIT",
+  "agents": [
+    "./claude-agents/architect.md",
+    "./claude-agents/builder.md",
+    "./claude-agents/code-reviewer.md",
+    "./claude-agents/debugger.md",
+    "./claude-agents/deploy-reviewer.md",
+    "./claude-agents/docs-writer.md",
+    "./claude-agents/planner.md",
+    "./claude-agents/requirements-analyst.md",
+    "./claude-agents/researcher.md",
+    "./claude-agents/security-reviewer.md",
+    "./claude-agents/test-designer.md",
+    "./claude-agents/test-writer.md"
+  ]
 }

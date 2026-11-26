@@ -4,6 +4,14 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+- Gemini CLI support. `gemini-extension.json` (versioned with the other manifests, which `make check` and
+  `make release` keep in step) lets Gemini install the plugin from GitHub with `gemini extensions install`.
+  Checked with Gemini itself: it validates, and all the skills load. Gemini also loads any `agents/` folder
+  in an extension and rejected our Claude-format agents (`tools` as a string, a `skills` key), so the agent
+  files moved from `agents/` to `claude-agents/` and `.claude-plugin/plugin.json` now lists them. Claude Code
+  still finds all twelve (confirmed live) and Gemini reports no agent errors. `make check` fails if the list
+  and the folder disagree, and the version-level check treats the move as the same agents, not twelve removals.
+
 - Skill-triggering evals. `evals/` holds eight cases for `claude plugin eval`, each a realistic prompt with a
   grader that checks the right skill was loaded (debug-failure, kubernetes, dependency-management, git-workflow,
   testing-strategy, secrets-and-config, project-structure, docker). `make evals` runs them three times each (opt-in, about

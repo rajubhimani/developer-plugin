@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import surface  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-MANIFESTS = [ROOT / "plugin.json", ROOT / ".claude-plugin" / "plugin.json"]
+MANIFESTS = [ROOT / "plugin.json", ROOT / ".claude-plugin" / "plugin.json", ROOT / "gemini-extension.json"]
 CHANGELOG = ROOT / "CHANGELOG.md"
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 

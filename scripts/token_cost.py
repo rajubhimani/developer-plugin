@@ -3,7 +3,9 @@
     python3 scripts/token_cost.py
 
 Counts about four characters to a token, so treat the numbers as a guide. For the exact
-figure Claude Code computes, run `claude plugin details developer-plugin`.
+figure Claude Code computes, run `claude plugin details developer-plugin`. That command
+does not count agents listed in the manifest (they live in claude-agents/), so its total
+is lower than this one by the agent descriptions.
 """
 
 import re
@@ -31,7 +33,7 @@ def tokens(chars: int) -> int:
 
 def main() -> int:
     rows = []
-    for kind, pattern in (("skill", "skills/*/SKILL.md"), ("agent", "agents/*.md")):
+    for kind, pattern in (("skill", "skills/*/SKILL.md"), ("agent", "claude-agents/*.md")):
         for path in sorted(ROOT.glob(pattern)):
             meta, text = fields(path)
             name = meta.get("name", path.stem)
@@ -42,7 +44,7 @@ def main() -> int:
           f"({sum(1 for r in rows if r[0] == 'skill')} skills, {sum(1 for r in rows if r[0] == 'agent')} agents)")
     print("one dispatch of each agent (its prompt plus the skills it preloads):")
     sizes = {name: body for kind, name, _, body in rows if kind == "skill"}
-    for path in sorted(ROOT.glob("agents/*.md")):
+    for path in sorted(ROOT.glob("claude-agents/*.md")):
         meta, text = fields(path)
         block = re.match(r"^---\n(.*?)\n---\n", text, re.S)
         preload, grab = [], False
