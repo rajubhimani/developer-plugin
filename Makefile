@@ -25,6 +25,7 @@
 #   make versions                 print the current stable release of common tools
 #   make token-cost               estimate what the plugin costs in context
 #   make honest-tests             fail if this branch weakened the tests (BASE=<ref>)
+#   make evals                    check that skills still trigger (uses your Claude account, about $3)
 
 PY       := python3
 PLUGIN   := developer-plugin
@@ -34,7 +35,7 @@ PROJECTS ?=
 .DEFAULT_GOAL := help
 .PHONY: help test check validate sync-rules release release-level releases install-claude uninstall-claude \
 	install-codex uninstall-codex install-antigravity uninstall-antigravity install-copilot \
-	install-all update-clis check-install navigator workspace versions init-project structure-check token-cost honest-tests
+	install-all update-clis check-install navigator workspace versions init-project structure-check token-cost honest-tests evals
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-22s %s\n", $$1, $$2}'
@@ -115,3 +116,6 @@ token-cost: ## Estimate what the plugin costs in context (always loaded versus o
 
 honest-tests: ## Fail if this branch weakened the tests (BASE=<ref>, default origin/main)
 	@$(PY) scripts/check_tests_honest.py $(if $(BASE),--base $(BASE),)
+
+evals: ## Check that skills still trigger, with claude plugin eval (opt-in: runs real sessions, about $3)
+	@claude plugin eval . --trust-plugin --runs 3 --threshold 0.66 -j 4 --ablation none --no-publish --max-cost-usd 8

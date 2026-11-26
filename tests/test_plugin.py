@@ -919,6 +919,30 @@ class MaintainedCodeTests(unittest.TestCase):
         self.assertNotIn("dev-dependencies", python_dev)  # [dependency-groups] replaced it
 
 
+class EvalSuiteTests(unittest.TestCase):
+    """The eval cases are well formed and name skills that exist (free; running them costs money)."""
+
+    CASES = sorted(p for p in (ROOT / "evals").iterdir() if p.is_dir() and (p / "prompt.md").is_file())
+
+    def test_there_are_cases(self) -> None:
+        self.assertGreaterEqual(len(self.CASES), 8)
+
+    def test_each_case_expects_a_real_skill_to_load(self) -> None:
+        for case in self.CASES:
+            with self.subTest(case=case.name):
+                graders = sorted((case / "graders").glob("*.md"))
+                self.assertTrue(graders, "a case needs a grader")
+                text = graders[0].read_text(encoding="utf-8")
+                self.assertIn("type: tool_used", text)
+                self.assertIn("tool: Skill", text)
+                skill = re.search(r"(?m)^input_match: (\S+)$", text).group(1)
+                self.assertTrue((ROOT / "skills" / skill / "SKILL.md").is_file(), f"{skill} is not a skill")
+                self.assertIn("Skill", (case / "prompt.md").read_text(encoding="utf-8").split("\n---\n")[0])
+
+    def test_run_output_is_not_committed(self) -> None:
+        self.assertIn("evals/results/", (ROOT / ".gitignore").read_text(encoding="utf-8"))
+
+
 class GitGuardTests(unittest.TestCase):
     """The git guard blocks commands that destroy work and lets everything else through."""
 

@@ -4,6 +4,13 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+- Skill-triggering evals. `evals/` holds eight cases for `claude plugin eval`, each a realistic prompt with a
+  grader that checks the right skill was loaded (debug-failure, kubernetes, dependency-management, git-workflow,
+  testing-strategy, secrets-and-config, project-structure, docker). `make evals` runs them three times each (opt-in, about
+  $3 on your own account); `make check` runs a free static check that each case is well formed and names a real skill.
+  A control case with the wrong skill failed as it should. Against the current descriptions 40 of 41
+  runs loaded the right skill, so triggering is probabilistic and a case passes at two of three runs.
+
 - A git guard for agents. `scripts/block_dangerous_git.py` is a Claude Code hook that blocks force and
   delete pushes, `reset --hard`, `clean -f`, `branch -D`, `checkout .`, `restore .` and `stash drop`/`clear`
   before they run, and allows ordinary git. It reads the command with a shell tokenizer, so
