@@ -1,6 +1,6 @@
 ---
 name: domain-modeling
-description: Layering and domain modelling (ports and adapters, clean layers, domain-driven design) applied only where the domain is complex, with a test for when plain CRUD is the right answer. Use when structuring business logic, deciding on layers, or reviewing an over-layered or anemic design.
+description: Layering and domain modelling (ports and adapters, DDD) only where the domain is complex, with a test for when plain CRUD is right. Use when structuring business logic, choosing layers, or reviewing an over-layered or anemic design.
 verified: 2026-11-19
 ---
 

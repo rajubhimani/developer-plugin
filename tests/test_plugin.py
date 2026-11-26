@@ -16,6 +16,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
@@ -723,7 +724,7 @@ class ProjectKindTests(unittest.TestCase):
     def test_the_check_reports_what_an_adopted_project_needs_by_hand(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = self.existing_flat_library(tmp)
-            self.init(repo, "python", "--kind", "library", "--name", "mylib")
+            self.init(repo, "python", "--kind", "library", "--name", "mylib", "--structure", "best-practice")
             result = self.structure(repo)
             self.assertEqual(result.returncode, 1)
             self.assertIn("flat layout (package 'mylib' sits beside pyproject.toml)", result.stdout)
@@ -731,6 +732,102 @@ class ProjectKindTests(unittest.TestCase):
             self.assertIn("requirements.txt: legacy packaging file", result.stdout)
             self.assertIn("init never creates source files in an existing project", result.stdout)
             self.assertNotIn(str(repo), result.stdout, "messages use project-relative paths")
+
+    # ---- the owner decides: best practice, or keep the project's own structure ---------
+
+    def test_an_existing_project_keeps_its_own_structure_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self.existing_flat_library(tmp)
+            before = {p.relative_to(repo).as_posix(): p.read_bytes() for p in repo.rglob("*") if p.is_file()}
+            made = self.init(repo, "python", "--kind", "library", "--name", "mylib")
+            self.assertEqual(made.returncode, 0, made.stderr)
+            self.assertIn("run again with --structure best-practice", made.stdout)
+            profile = json.loads((repo / ".developer-plugin" / "project.json").read_text())
+            self.assertEqual((profile["structure"], profile["required"]), ("own", ["docs/project-structure.md"]))
+            self.assertFalse((repo / "src").exists(), "no folder is created beside the owner's layout")
+            for name, content in before.items():
+                self.assertEqual((repo / name).read_bytes(), content, f"{name} must be left as it was")
+            note = (repo / "docs" / "project-structure.md").read_text()
+            self.assertIn("flat layout, package `mylib`", note)
+            self.assertIn("do not move, rename or reorganise", note.lower())
+            self.assertIn("docs/project-structure.md", (repo / "AGENTS.md").read_text())
+            self.assertFalse((repo / "docs" / "structure-plan.md").exists())
+
+    def test_the_check_does_not_enforce_a_layout_on_an_owners_own_structure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self.existing_flat_library(tmp)
+            self.init(repo, "python", "--kind", "library", "--name", "mylib")
+            result = self.structure(repo)
+            self.assertEqual(result.returncode, 0, result.stdout)
+            self.assertNotIn("FAIL", result.stdout)
+            self.assertIn("own structure", result.stdout)
+            (repo / "docs" / "project-structure.md").unlink()
+            self.assertEqual(self.structure(repo).returncode, 1, "the note is the one required file")
+
+    def test_choosing_best_practice_writes_a_plan_and_moves_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self.existing_flat_library(tmp)
+            before = (repo / "mylib" / "__init__.py").read_bytes()
+            made = self.init(repo, "python", "--kind", "library", "--name", "mylib", "--structure", "best-practice")
+            self.assertEqual(made.returncode, 0, made.stderr)
+            profile = json.loads((repo / ".developer-plugin" / "project.json").read_text())
+            self.assertEqual(profile["structure"], "best-practice")
+            plan = (repo / "docs" / "structure-plan.md").read_text()
+            self.assertIn("- [ ]", plan)
+            self.assertIn("flat layout", plan)
+            self.assertEqual((repo / "mylib" / "__init__.py").read_bytes(), before)
+            self.assertFalse((repo / "src").exists())
+            self.assertFalse((repo / "docs" / "project-structure.md").exists())
+
+    def test_the_choice_can_be_switched_later(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self.existing_flat_library(tmp)
+            self.init(repo, "python", "--kind", "library", "--name", "mylib")
+            switched = self.init(repo, "python", "--structure", "best-practice")
+            self.assertEqual(switched.returncode, 0, switched.stderr)
+            self.assertIn("structure changed to best-practice", switched.stdout)
+            profile = json.loads((repo / ".developer-plugin" / "project.json").read_text())
+            self.assertEqual(profile["structure"], "best-practice")
+            self.assertTrue((repo / "docs" / "structure-plan.md").exists())
+            self.assertEqual(self.structure(repo).returncode, 1, "the recommended layout is enforced again")
+
+    def test_a_project_recorded_before_the_choice_existed_is_not_switched(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = self.existing_flat_library(tmp)
+            self.init(repo, "python", "--kind", "library", "--name", "mylib", "--structure", "best-practice")
+            path = repo / ".developer-plugin" / "project.json"
+            legacy = json.loads(path.read_text())
+            del legacy["structure"]
+            path.write_text(json.dumps(legacy))
+            again = self.init(repo, "python")
+            self.assertEqual(again.returncode, 0, again.stderr)
+            self.assertNotIn("structure changed", again.stdout)
+            self.assertNotIn("structure", json.loads(path.read_text()))
+            self.assertEqual(self.structure(repo).returncode, 1, "still checked as best practice")
+
+    def test_a_new_empty_project_gets_the_recommended_layout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            made = self.init(Path(tmp), "python", "--kind", "library", "--name", "fresh")
+            self.assertEqual(made.returncode, 0, made.stderr)
+            profile = json.loads((Path(tmp) / ".developer-plugin" / "project.json").read_text())
+            self.assertEqual(profile["structure"], "best-practice")
+            self.assertTrue((Path(tmp) / "src" / "fresh" / "__init__.py").exists())
+
+    def test_an_unknown_structure_value_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            refused = self.init(Path(tmp), "python", "--kind", "library", "--structure", "whatever")
+            self.assertNotEqual(refused.returncode, 0)
+            self.assertFalse((Path(tmp) / ".developer-plugin").exists())
+
+    def test_the_question_defaults_to_keeping_the_structure(self) -> None:
+        import project_kinds as pk
+        said: list[str] = []
+        for answers, expected in ((["", ], "own"), (["2"], "own"), (["1"], "best-practice"),
+                                  (["best-practice"], "best-practice"), (["nonsense", "1"], "best-practice")):
+            replies = iter(answers)
+            self.assertEqual(pk.ask_structure(lambda _: next(replies), said.append, "python", "Library",
+                                              ["layout: flat"]), expected)
+        self.assertTrue(any("found: layout: flat" in line for line in said), "the answer is informed by what was found")
 
     def test_adopting_a_src_layout_project_may_add_the_typed_marker(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1289,6 +1386,160 @@ def load_installer():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+class FakeClaude:
+    """A stand-in for the claude command that behaves like the real one where it matters.
+
+    It fails to add a marketplace whose folder is missing, and it deletes the folder of a
+    marketplace it removes when that folder is under its own managed directory.
+    """
+
+    def __init__(self, managed: Path) -> None:
+        self.managed = managed
+        self.marketplaces: dict[str, dict] = {}
+        self.plugins: dict[str, dict] = {}
+        self.calls: list[tuple[str, ...]] = []
+
+    def run(self, args: list[str], check: bool = True) -> None:
+        command = tuple(args[1:])
+        self.calls.append(command)
+        try:
+            self.handle(command)
+        except subprocess.CalledProcessError:
+            if check:
+                raise
+
+    def fail(self) -> None:
+        raise subprocess.CalledProcessError(1, "claude")
+
+    def handle(self, command: tuple[str, ...]) -> None:
+        match command:
+            case ("plugin", "marketplace", "add", path):
+                manifest = Path(path) / ".claude-plugin" / "marketplace.json"
+                if not manifest.exists():
+                    self.fail()
+                name = json.loads(manifest.read_text(encoding="utf-8"))["name"]
+                self.marketplaces[name] = {"name": name, "source": "directory", "path": path}
+            case ("plugin", "marketplace", "remove", name):
+                if name not in self.marketplaces:
+                    self.fail()
+                entry = self.marketplaces.pop(name)
+                folder = Path(entry.get("path", "")) if entry["source"] == "directory" else None
+                if folder is not None and self.managed in folder.parents and folder.exists():
+                    shutil.rmtree(folder)
+                self.plugins = {k: v for k, v in self.plugins.items() if not k.endswith(f"@{name}")}
+            case ("plugin", "marketplace", "update", name):
+                if name not in self.marketplaces:
+                    self.fail()
+            case ("plugin", "install", plugin_id):
+                _, _, market = plugin_id.partition("@")
+                entry = self.marketplaces.get(market)
+                if entry is None or entry["source"] != "directory" or not Path(entry["path"]).is_dir():
+                    self.fail()
+                version = json.loads((Path(entry["path"]) / "plugin.json").read_text(encoding="utf-8"))["version"]
+                self.plugins[plugin_id] = {"id": plugin_id, "version": version, "enabled": True}
+            case ("plugin", "uninstall", plugin_id):
+                if plugin_id not in self.plugins:
+                    self.fail()
+                del self.plugins[plugin_id]
+            case _:
+                raise AssertionError(f"unexpected claude command {command}")
+
+    def json(self, claude: str, *args: str) -> list[dict] | None:
+        if args == ("plugin", "list", "--json"):
+            return list(self.plugins.values())
+        if args == ("plugin", "marketplace", "list", "--json"):
+            return list(self.marketplaces.values())
+        raise AssertionError(f"unexpected claude query {args}")
+
+
+class ClaudeInstallTests(unittest.TestCase):
+    """The Claude installer can be run at any time, in any starting state, and ends installed."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        root = Path(self.tmp.name)
+        self.module = load_installer()
+        self.copy = root / "own" / "claude"
+        self.legacy = root / "claude" / "marketplaces" / "developer-plugin-local"
+        self.fake = FakeClaude(managed=root / "claude" / "marketplaces")
+        # Only the claude command is faked. git and the rest stay real, and the test must not need
+        # a claude binary: CI machines have none.
+        real_tool = self.module.tool
+        for name, value in (("tool", lambda name: "claude" if name == "claude" else real_tool(name)),
+                            ("run", self.fake.run),
+                            ("claude_json", self.fake.json), ("claude_copy", lambda: self.copy),
+                            ("legacy_claude_copy", lambda: self.legacy)):
+            patcher = mock.patch.object(self.module, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.plugin_id = "developer-plugin@developer-plugin"
+
+    def installed(self) -> dict:
+        return self.fake.plugins.get(self.plugin_id, {})
+
+    def test_installs_from_nothing(self) -> None:
+        self.module.install_claude(ref=None)
+        self.assertTrue(self.installed()["enabled"])
+        self.assertEqual(self.fake.marketplaces["developer-plugin"]["path"], str(self.copy))
+
+    def test_running_again_never_removes_the_marketplace(self) -> None:
+        self.module.install_claude(ref=None)
+        self.fake.calls.clear()
+        self.module.install_claude(ref=None)
+        self.assertTrue(self.installed()["enabled"])
+        self.assertNotIn(("plugin", "marketplace", "remove", "developer-plugin"), self.fake.calls)
+        self.assertTrue(self.copy.is_dir())
+
+    def test_an_earlier_install_is_migrated(self) -> None:
+        self.legacy.mkdir(parents=True)
+        (self.legacy / ".claude-plugin").mkdir()
+        (self.legacy / ".claude-plugin" / "marketplace.json").write_text('{"name": "developer-plugin-local"}')
+        (self.legacy / self.module.MARKER).write_text("{}")
+        self.fake.marketplaces["developer-plugin-local"] = {
+            "name": "developer-plugin-local", "source": "directory", "path": str(self.legacy)}
+        self.fake.plugins["developer-plugin@developer-plugin-local"] = {
+            "id": "developer-plugin@developer-plugin-local", "version": "0.0.1", "enabled": True}
+        self.module.install_claude(ref=None)
+        self.assertNotIn("developer-plugin-local", self.fake.marketplaces)
+        self.assertNotIn("developer-plugin@developer-plugin-local", self.fake.plugins)
+        self.assertFalse(self.legacy.exists())
+        self.assertTrue(self.installed()["enabled"])
+
+    def test_a_github_marketplace_is_switched_to_the_local_copy(self) -> None:
+        self.fake.marketplaces["developer-plugin"] = {
+            "name": "developer-plugin", "source": "github", "repo": "rajubhimani/developer-plugin"}
+        self.module.install_claude(ref=None)
+        self.assertEqual(self.fake.marketplaces["developer-plugin"]["source"], "directory")
+        self.assertTrue(self.installed()["enabled"])
+
+    def test_a_wrong_end_state_is_reported(self) -> None:
+        original = self.fake.handle
+
+        def refuse(command: tuple[str, ...]) -> None:
+            original(command)
+            if command[:2] == ("plugin", "install"):
+                self.fake.plugins[command[2]]["enabled"] = False
+
+        with mock.patch.object(self.fake, "handle", refuse), self.assertRaises(SystemExit) as raised:
+            self.module.install_claude(ref=None)
+        self.assertIn("did not finish", str(raised.exception))
+
+    def test_uninstall_removes_ours_and_leaves_a_github_marketplace(self) -> None:
+        self.module.install_claude(ref=None)
+        self.module.uninstall_claude()
+        self.assertEqual((self.fake.plugins, self.fake.marketplaces, self.copy.exists()), ({}, {}, False))
+        self.fake.marketplaces["developer-plugin"] = {
+            "name": "developer-plugin", "source": "github", "repo": "rajubhimani/developer-plugin"}
+        self.module.uninstall_claude()
+        self.assertIn("developer-plugin", self.fake.marketplaces)
+
+    def test_the_installer_and_the_published_marketplace_agree(self) -> None:
+        market = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+        self.assertEqual(market["name"], self.module.CLAUDE_MARKETPLACE)
+        self.assertEqual(market["plugins"][0]["name"], self.module.PLUGIN)
 
 
 class InstallManifestTests(unittest.TestCase):

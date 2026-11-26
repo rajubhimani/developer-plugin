@@ -1,6 +1,6 @@
 ---
 name: ci-cd
-description: Continuous integration and delivery best practice (build once, gated pipelines, least-privilege tokens, pinned actions, OIDC deploys, SBOM and provenance, environment promotion, rollback). Use when creating or changing CI or CD pipelines, release automation, or deployment configuration.
+description: CI and CD practice: build once, gated pipelines, least-privilege tokens, pinned actions, OIDC, SBOM, promotion, rollback. Use when creating or changing pipelines, release automation or deployment configuration.
 verified: 2026-11-07
 ---
 

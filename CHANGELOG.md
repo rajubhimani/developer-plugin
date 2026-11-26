@@ -4,6 +4,39 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-25
+
+- Your project, your structure. In a folder that already holds code, `init_project.py` now asks
+  once whether to follow best practice or keep the project's own structure (`--structure
+  best-practice|own`; the default without a terminal is `own`, so an existing layout is never
+  imposed). `own` records what was found and the conventions in `docs/project-structure.md`,
+  points `AGENTS.md` at it, creates no source folders, and `make structure-check` stops
+  enforcing a layout. `best-practice` writes `docs/structure-plan.md`, a checklist of what
+  differs, to be done in approved, tested steps. The choice is recorded as `structure` and can
+  be switched later. A new, empty folder still gets the recommended layout. The
+  `project-structure` and `project-setup` skills tell agents to ask and to honour the answer.
+  Existing projects initialised before this keep behaving as best practice until re-run.
+
+- Leaner prompts. Skill and agent descriptions load into every session, so 52 of them are
+  shorter (what each covers and its "Use when" trigger are kept; the enumerated lists are
+  gone). Claude Code's own figure for the plugin's always-on cost fell from about 5,970 to
+  about 5,110 tokens. `ai-assisted-development` gains "Spend tokens wisely" (clear between
+  tasks, keep always-loaded text small and stable for prompt caching, turn off unused tools,
+  point instead of paste, match model and effort to the job, cap automated runs) and
+  `agent-handoff` gains a note on cheap dispatch. `make check` now fails on a description over
+  300 characters or a skill body over 500 lines, and `make token-cost` prints an estimate.
+
+- Shareable Claude Code install and a Claude installer that can be run at any time. Anyone can
+  install with `/plugin install developer-plugin --marketplace rajubhimani/developer-plugin`;
+  the marketplace is now named `developer-plugin` (was `developer-plugin-local`) with an owner,
+  a description, and an author, homepage and repository on the plugin, and `make check`
+  enforces them. `scripts/install.py claude` keeps its copy in `~/.developer-plugin/claude`
+  instead of inside Claude's own folders (Claude deletes a removed marketplace's folder, which
+  made a re-install fail on the first try), never removes a marketplace except to change its
+  source, reinstalls the plugin so a same-version change is picked up, migrates an earlier
+  install, and checks at the end that the plugin is enabled at the expected version. Tests run
+  the installer against a stand-in `claude` that deletes a removed marketplace's folder.
+
 - Maintained libraries and no deprecated code, as standing rules. The core standards gain
   "Maintained code" (rules 23 to 25): choose maintained libraries and replace one that stops
   being maintained; replace a deprecated API, option or dependency when you find it, as its

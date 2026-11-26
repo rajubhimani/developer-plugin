@@ -1,6 +1,6 @@
 ---
 name: refresh-practices
-description: How to keep the developer plugin's guidance current and useful over time. Separates stable principles from tool details, and describes the review steps and the changelog. Use when asked to update, refresh or re-research the plugin's practices, or when a skill's verified date is old.
+description: Keep this plugin's guidance current: stable principles apart from tool details, review steps, changelog. Use when asked to update or re-research the plugin's practices, or when a skill's verified date is old.
 verified: 2026-11-07
 ---
 

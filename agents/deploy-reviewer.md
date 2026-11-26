@@ -1,6 +1,6 @@
 ---
 name: deploy-reviewer
-description: Read-only deploy-readiness review of a diff or design: rollback, migrations, environment variables, container and pipeline files, release order, and post-deploy checks. Use at medium or high risk, or when a diff touches migrations, infrastructure, packaging or pipelines.
+description: Read-only deploy-readiness review: rollback, migrations, environment variables, container and pipeline files, release order, post-deploy checks. Use at medium or high risk, or when a diff touches migrations, infrastructure, packaging or pipelines.
 tools: Read, Grep, Glob, Bash
 model: inherit
 skills:

@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "developer-plugin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "One plugin with shared skills for Claude Code, Codex, Antigravity and GitHub Copilot.",
   "keywords": [
     "developer",
@@ -10,5 +10,11 @@
     "codex",
     "antigravity",
     "copilot"
-  ]
+  ],
+  "author": {
+    "name": "Raju Bhimani",
+    "url": "https://github.com/rajubhimani"
+  },
+  "homepage": "https://github.com/rajubhimani/developer-plugin",
+  "repository": "https://github.com/rajubhimani/developer-plugin"
 }

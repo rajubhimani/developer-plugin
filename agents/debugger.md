@@ -1,6 +1,6 @@
 ---
 name: debugger
-description: Diagnoses a failure whose cause is unknown. Reproduces it, isolates the layer, and states the cause with evidence, then writes the Observed, Expected and Must-stay-unchanged lines. Read-only; never patches. Use when a test, build or feature fails for an unknown reason, or after a regression.
+description: Diagnoses a failure of unknown cause: reproduces, isolates the layer, states the cause with evidence, writes Observed, Expected and Must-stay-unchanged lines. Read-only. Use when a test, build or feature fails unexpectedly, or after a regression.
 tools: Read, Grep, Glob, Bash
 model: inherit
 skills:

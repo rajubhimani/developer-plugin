@@ -22,7 +22,8 @@ not generated or verified yet, so they still get the skills alone.
 Each install copies the plugin into the client's own folder, so deleting the
 project folder does not break it. Re-run the install to pick up changes.
 
-- Claude Code: `~/.claude/plugins/marketplaces/developer-plugin-local`
+- Claude Code: `~/.developer-plugin/claude` (registered as the `developer-plugin` marketplace; Claude
+  keeps its own cache under `~/.claude/plugins/cache`). From GitHub there is no local copy to manage.
 - Codex: `~/.codex/marketplaces/developer-plugin-local` (then `~/.codex/plugins/cache`)
 - Antigravity: `~/.gemini/config/plugins/developer-plugin`
 - Copilot CLI: `~/.copilot/installed-plugins` (copied from the git remote)

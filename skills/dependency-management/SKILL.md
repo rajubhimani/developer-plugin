@@ -1,6 +1,6 @@
 ---
 name: dependency-management
-description: Choosing, adding, pinning, updating and auditing third-party dependencies and protecting the software supply chain (lockfiles, vulnerability scanning, provenance, typosquatting, licenses). Use when adding or upgrading a package, reviewing a lockfile change, or responding to a vulnerability advisory.
+description: Choosing, pinning, updating and auditing dependencies and the supply chain: lockfiles, scanning, provenance, maintained libraries, licenses. Use when adding or upgrading a package, reviewing a lockfile change, or answering an advisory.
 verified: 2026-11-19
 ---
 

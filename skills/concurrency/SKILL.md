@@ -1,6 +1,6 @@
 ---
 name: concurrency
-description: Writing concurrent and asynchronous code that is correct, covering shared state, immutability, locks and ordering, async pitfalls, cancellation and deadlines, structured concurrency and testing races. Use when adding threads, async tasks, background jobs, shared caches or locks, or when debugging flaky or hung behaviour.
+description: Correct concurrent and async code: shared state, locks, cancellation, deadlines, structured concurrency, race tests. Use when adding threads, async tasks, background jobs, caches or locks, or debugging flaky or hung behaviour.
 verified: 2026-11-19
 ---
 

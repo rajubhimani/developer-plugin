@@ -1,6 +1,6 @@
 ---
 name: agent-handoff
-description: How the main session hands work to the plugin's agents and checks what comes back (roles, order, brief, report, verification, routing of findings). Use when dispatching researcher, requirements-analyst, architect, test-designer, planner, test-writer, builder, docs-writer, code-reviewer, security-reviewer, deploy-reviewer or debugger, or when reading an agent's report.
+description: How the main session briefs the plugin's agents and checks their reports. Use when dispatching any of the plugin's agents (researcher, architect, planner, builder, reviewers, debugger and so on) or reading an agent's report.
 verified: 2026-11-17
 ---
 
@@ -55,6 +55,11 @@ Give each agent one short brief with six parts, pointers not pasted content:
 
 An agent reads its brief, opens the files it points at, and reads the real
 diff or file itself. If a brief fact looks stale it says so in its report.
+
+Keep dispatch cheap: every agent starts with an empty context and pays for what it
+reads, so name the files instead of asking it to search, ask for a short report, and
+send one agent per independent job. Use the strongest model for design and diagnosis,
+a lighter one for read-only lookups (see `ai-assisted-development`).
 
 ## The report
 

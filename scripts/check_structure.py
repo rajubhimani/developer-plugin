@@ -42,6 +42,7 @@ class Report:
     fails: list[str] = field(default_factory=list)
     warns: list[str] = field(default_factory=list)
     todos: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
 
 
 def walk(folder: Path, suffix: str) -> list[Path]:
@@ -410,9 +411,10 @@ def check(root: Path) -> tuple[Report, dict[str, object] | None]:
         return report, None
     language, kind = str(profile["language"]), str(profile["kind"])
     adopted = bool(profile.get("adopted"))
+    own = profile.get("structure") == "own"
     for relative in profile.get("required", []):
         if not (root / relative).exists():
-            how = ("add it by hand: init never creates source files in an existing project"
+            how = ("create it as a step of docs/structure-plan.md; init never creates source files in an existing project"
                    if adopted else "run init_project.py again to add it")
             report.fails.append(f"{relative} is missing (required for a {kind}); {how}")
     for name in PLACEHOLDER_FILES:
@@ -420,6 +422,10 @@ def check(root: Path) -> tuple[Report, dict[str, object] | None]:
             if file.is_file():
                 for found in sorted(set(PLACEHOLDER.findall(read_toml_text(file))))[:4]:
                     report.todos.append(f"{file.relative_to(root).as_posix()}: replace {found}")
+    if own:
+        # The owner kept their own structure: no layout rule is enforced, only placeholders.
+        report.notes.append("own structure: layout rules are not enforced; conventions are in docs/project-structure.md")
+        return report, profile
     package = str(profile.get("package", ""))
     if language == "python":
         if kind == "monorepo":
@@ -468,10 +474,13 @@ def main(argv: list[str]) -> int:
         print(f"WARN {line}")
     for line in report.todos:
         print(f"TODO {line}")
-    label = f"{profile['language']} {profile['kind']}"
+    for line in report.notes:
+        print(f"NOTE {line}")
+    label = f"{profile['language']} {profile['kind']}" + (", own structure" if profile.get("structure") == "own" else "")
     broken = bool(report.fails) or (args.strict and bool(report.warns))
     if not (report.fails or report.warns or report.todos):
-        print(f"structure-check: the layout matches a {label}")
+        print(f"structure-check: " + ("nothing to fix (own structure kept)" if report.notes
+                                      else f"the layout matches a {label}"))
     else:
         print(f"structure-check ({label}): {len(report.fails)} fail, {len(report.warns)} warn, {len(report.todos)} to fill")
     return 1 if broken else 0

@@ -1,7 +1,8 @@
 """Copy the standard project files for one language into a repo, without overwriting.
 
 Usage: python3 scripts/init_project.py <repo folder> <language>
-           [--kind KIND] [--name NAME] [--members name:kind,...] [--module PATH] [--no-input]
+           [--kind KIND] [--name NAME] [--members name:kind,...] [--module PATH]
+           [--structure best-practice|own] [--no-input]
 
 Languages: python, go, rust, node, c, cpp, java. Each run reports which files it
 created and which it kept because they already existed.
@@ -11,7 +12,13 @@ and decides the folder layout. In a terminal, a new project is asked once; the a
 is recorded in .developer-plugin/project.json and never asked again. Without a
 terminal and without --kind, the generic layout is used. In a folder that already
 holds a project the kind is recorded and only safe files are added; code is never
-moved or replaced. Standard library only.
+moved or replaced.
+
+In an existing project the owner also chooses a *structure*: `best-practice` (move toward the
+recommended layout; a plan is written and nothing moves without approval) or `own` (keep the
+layout; it is recorded in docs/project-structure.md and the plugin works inside it). A
+terminal asks once; without one an existing project keeps its own structure. Standard
+library only.
 """
 
 from __future__ import annotations
@@ -212,6 +219,43 @@ def choose(args: argparse.Namespace, repo: Path, kinds: dict[str, pk.Kind],
     return None
 
 
+def resolve_structure(args: argparse.Namespace, repo: Path, profile: dict[str, object] | None, kind: pk.Kind,
+                      existing: bool) -> tuple[str, str]:
+    """Return (structure, how it was decided): the flag, the record, a question, or a default.
+
+    A new, empty project gets the recommended layout. An existing project is never changed
+    to fit the plugin unless its owner says so: it keeps its own structure by default.
+    """
+    if args.structure:
+        return args.structure, "flag"
+    if profile is not None and profile.get("structure") in pk.STRUCTURES:
+        return str(profile["structure"]), "record"
+    if profile is not None:
+        return "best-practice", "record"  # recorded before the choice existed: behaviour is unchanged
+    if not existing:
+        return "best-practice", "default"
+    if sys.stdin.isatty() and sys.stdout.isatty() and not args.no_input:
+        return pk.ask_structure(input, print, args.language, kind.title, pk.describe_layout(repo, args.language)), "asked"
+    return "own", "default"
+
+
+def write_structure_plan(repo: Path, name: str, language: str, kind_title: str) -> None:
+    """Write docs/structure-plan.md from the checker's findings, so the move is a list of small steps."""
+    import check_structure as cs  # noqa: PLC0415 - only needed here
+    report, _ = cs.check(repo)
+    target = repo / pk.PLAN_FILE
+    if not (report.fails or report.warns):
+        print("The layout already matches the recommended one; no plan needed.")
+        return
+    if target.exists():
+        print(f"kept    {pk.PLAN_FILE} (already exists)")
+        return
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(pk.structure_plan(name, language, kind_title, report.fails, report.warns), encoding="utf-8")
+    print(f"created {pk.PLAN_FILE}: {len(report.fails)} broken, {len(report.warns)} against advice. "
+          "Nothing was moved; do each step with the owner's approval (see the project-structure skill).")
+
+
 GIT_MISSING = ("git is not installed. Install it, then run `git init` in the repo:\n"
                "  macOS:          xcode-select --install   or   brew install git\n"
                "  Debian/Ubuntu:  sudo apt install git\n"
@@ -264,6 +308,8 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--name", help="project name, lower-case words joined by hyphens")
     parser.add_argument("--members", help="monorepo members as name:kind,name:kind")
     parser.add_argument("--module", help="Go module path, such as github.com/you/project")
+    parser.add_argument("--structure", choices=pk.STRUCTURES,
+                        help="in an existing project: follow best practice, or keep its own structure")
     parser.add_argument("--no-input", action="store_true", help="never ask questions")
     args = parser.parse_args(argv)
     repo = args.repo.expanduser().resolve()
@@ -296,9 +342,12 @@ def main(argv: list[str]) -> int:
         profile_record = None
     else:
         kind = kinds[str(choice["kind"])]
-        adopting = pk.detect_existing(repo, args.language)
+        existing = pk.detect_existing(repo, args.language)
+        structure, decided = resolve_structure(args, repo, profile, kind, existing)
+        adopting = existing
         if profile is not None:
             adopting = bool(profile.get("adopted", adopting))
+        adopting = adopting or structure == "own"  # honouring a layout means never creating one
         members = [dict(m) for m in choice["members"]]  # type: ignore[union-attr]
         try:
             files, profile_record = kind_files(args.language, repo, kind, kinds, str(choice["name"]), members,
@@ -306,14 +355,33 @@ def main(argv: list[str]) -> int:
         except ValueError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
+        profile_record["structure"] = structure
         common = common_files(args.language, kind)
         for relative, text in files.items():
             common[relative] = text
-        print(f"Project kind: {kind.title} ({kind.name})" + (" - existing project, adding safe files only" if adopting else ""))
+        facts = pk.describe_layout(repo, args.language)
+        if structure == "own":
+            common["AGENTS.md"] = (TEMPLATES / "AGENTS.own-structure.md").read_text(encoding="utf-8")
+            common[pk.NOTE_FILE] = pk.structure_note(str(choice["name"]), args.language, kind.title, facts)
+            profile_record["required"] = [pk.NOTE_FILE]
+            profile_record["layout"] = facts
+        print(f"Project kind: {kind.title} ({kind.name}); structure: "
+              + ("keep its own" if structure == "own" else "best practice")
+              + (" - existing project, adding safe files only" if adopting else ""))
+        if structure == "own" and decided == "default" and existing:
+            print("This project already has code, so its own structure is kept. To move toward the "
+                  "recommended layout instead, run again with --structure best-practice.")
         write_new(repo, common)
         if profile is None:
             pk.write_profile(repo, profile_record)
             print(f"recorded {pk.PROFILE.as_posix()} (you will not be asked again)")
+        elif profile.get("structure") not in (None, structure):
+            pk.write_profile(repo, {**profile, "structure": structure,
+                                    **({"layout": facts, "required": [pk.NOTE_FILE]} if structure == "own" else
+                                       {"required": profile_record["required"]})})
+            print(f"structure changed to {structure} in {pk.PROFILE.as_posix()}")
+        if structure == "best-practice" and existing:
+            write_structure_plan(repo, str(choice["name"]), args.language, kind.title)
     if args.language in HINTS and (choice is None or choice["kind"] == "webapp"):
         print(HINTS[args.language])
     print(ensure_git(repo))

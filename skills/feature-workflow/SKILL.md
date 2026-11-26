@@ -1,6 +1,6 @@
 ---
 name: feature-workflow
-description: The end-to-end path for building a feature in a project set up with this plugin, from requirement to feature file, tasks, tests and completion. Use when asked to start, plan, build or finish a feature or a change to a project.
+description: The path for building a feature in a project set up with this plugin: requirement, feature file, tasks, tests, completion. Use when asked to start, plan, build or finish a feature.
 verified: 2026-11-07
 ---
 

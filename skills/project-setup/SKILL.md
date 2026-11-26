@@ -1,7 +1,7 @@
 ---
 name: project-setup
-description: Set up a new or existing project, or a folder of projects, with this plugin's standard files, git repository, make targets, docs and task tracking. Use when starting a project, adding the plugin's structure to a repo, or setting up docs for a folder that holds several repos.
-verified: 2026-11-07
+description: Set up a new or existing project, or a folder of projects, with this plugin's files, git, make targets, docs and task tracking. Use when starting a project, adding the plugin's structure to a repo, or setting up docs for a folder of repos.
+verified: 2026-11-25
 ---
 
 # Project setup
@@ -11,7 +11,8 @@ verified: 2026-11-07
 First find out what the project is. If the folder has no
 `.developer-plugin/project.json`, ask the user what they are building (library, web app or
 service, command line tool, monorepo) and follow `project-structure`; it picks the layout
-and records the answer so nobody is asked twice.
+and records the answer so nobody is asked twice. If the folder already holds code, also ask
+whether to follow best practice or keep the project's own structure, and honour the answer.
 
 `make -C <plugin folder> init-project REPO=<project folder> LANG=<language> KIND=<kind> NAME=<name>`
 
@@ -23,8 +24,10 @@ This copies the kind's layout (for example `src/`, the public API and the tests 
 library), then the standard Makefile, container and CI files, a `.gitignore`, `AGENTS.md`
 and `CLAUDE.md`, the requirements file, the alignment test, the task tool and the layout
 check (`make structure-check`). It never overwrites an existing file. In a folder that
-already holds a project it records the kind and adds only safe files; it never creates
-source files or moves code. It runs `git init` if the folder is not a repository yet, and
+already holds a project it records the kind and the structure choice (`STRUCTURE=best-practice`
+or `own`, default `own`) and adds only safe files; it never creates source files or moves code.
+With `own` it writes `docs/project-structure.md`, the note every agent follows; with
+`best-practice` it writes `docs/structure-plan.md`. It runs `git init` if the folder is not a repository yet, and
 makes no commit. Commit the first setup yourself.
 
 Replace every `<placeholder>` in the manifests from a current lookup (`make structure-check`

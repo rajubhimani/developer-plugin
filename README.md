@@ -11,6 +11,23 @@ See [docs/CLIENTS.md](docs/CLIENTS.md) for the status of each.
 | GitHub Copilot | `plugin.json` (root) | `skills/` | rules not generated yet |
 | Antigravity | `plugin.json` (root) | `skills/` | `rules/AGENTS.md`; `hooks.json` at root |
 
+## Install
+
+**Claude Code** (a current release), one step, from GitHub:
+
+```
+/plugin install developer-plugin --marketplace rajubhimani/developer-plugin
+```
+
+Or from a terminal: `claude plugin marketplace add rajubhimani/developer-plugin`, then
+`claude plugin install developer-plugin@developer-plugin`. To update later:
+`claude plugin marketplace update developer-plugin`, then
+`claude plugin update developer-plugin`. Pin a released version with a tag.
+
+**Codex, Antigravity, Copilot, or a checkout you are changing:** clone the repo and run
+`make install-all` (or `python3 scripts/install.py <client>` where `make` is missing,
+for example on Windows). See "Installing and testing" below.
+
 ## Layout
 
 ```text
@@ -170,9 +187,20 @@ make init-project REPO=../shop LANG=node KIND=monorepo NAME=shop MEMBERS=web:web
 make structure-check REPO=../my-lib      # read-only: FAIL, WARN, TODO
 ```
 
-In a terminal, leave `KIND` out to be asked. In a folder that already holds a project the
-kind is recorded and only safe files are added; code is never moved or replaced, and
-`make structure-check` says what to change by hand.
+In a terminal, leave `KIND` out to be asked.
+
+**Your project, your structure.** In a folder that already holds code, the plugin also asks
+whether to follow best practice or keep the structure you have (`STRUCTURE=best-practice|own`
+without a terminal; the default is `own`). The answer is recorded as `structure`.
+
+- **own:** nothing is moved and no source folder is created. `docs/project-structure.md`
+  records what was found and the conventions to follow, `AGENTS.md` tells every agent to read
+  it, and `make structure-check` lists only placeholders to fill.
+- **best-practice:** only safe files are added, and `docs/structure-plan.md` lists what differs
+  as a checklist. Each step is its own approved, tested commit.
+
+Either choice can be switched later by running init with the other value. A new, empty folder
+gets the recommended layout without the question.
 
 For Python, `make init-project` also copies a uv multi-stage `Dockerfile`, a Compose
 stack, `.env.example`, `.dockerignore` and `src/app/settings.py`, and `make check`
@@ -184,6 +212,18 @@ so a setting forgotten in one place is caught before it fails at start-up.
 
 The plugin uses semantic versions (MAJOR.MINOR.PATCH). All manifests share one
 version, and `CHANGELOG.md` has an `[Unreleased]` section for work in progress.
+
+Choose the level by what users see, from the commits since the last tag:
+
+| Change | Level |
+|---|---|
+| Breaks existing users (removed or renamed behaviour). Before the first stable release this may ship in a minor release, and the changelog says so | major |
+| New skill, rule, agent, project kind or option; anything users can now do | minor |
+| Fix, wording, trimming or tests only; nothing new for users | patch |
+
+Claude Code only delivers an update to people who installed from GitHub when the version
+changes, so every enhancement that should reach them ends with a release. Put each change
+under `[Unreleased]` as it lands, finish the branch with `make release`, then tag after merge.
 
 - `make release LEVEL=minor` (or `patch`, `major`) runs the checks, bumps the
   version in every manifest, and dates the Unreleased section. Then commit and tag
@@ -206,8 +246,9 @@ so run the validator.
 
 ## Installing and testing
 
-Each installer copies the plugin into the client's own folder. Changes in this
-repo reach a client after you re-run its installer.
+For working on the plugin itself, or for clients other than Claude Code, each
+installer copies the plugin into a folder of its own. Changes in this repo reach a client
+after you re-run its installer. Every installer is safe to run again at any time.
 
 - `make install-claude` (or `install-codex`, `install-antigravity`, `install-copilot`)
 - `make install-all` runs every installer that is available.
@@ -223,7 +264,13 @@ repo reach a client after you re-run its installer.
 - An install stops before a downgrade or a major version step and asks for a
   typed `yes`. With no terminal it writes nothing; add `CONFIRM=1`
   (`--confirm-update`) to allow it.
-- `make uninstall-claude` and `make uninstall-antigravity` remove what the installers made.
+- `make uninstall-claude`, `uninstall-codex` and `uninstall-antigravity` remove what the
+  installers made (and nothing else).
+- The Claude installer keeps its copy in `~/.developer-plugin/claude`, registers it as the
+  marketplace, reinstalls the plugin, and checks at the end that it is enabled at the right
+  version. An install made by an earlier version of this installer is migrated on the next run.
+  If the marketplace was added from GitHub, the installer switches it to the local copy and
+  says so; `claude plugin marketplace add rajubhimani/developer-plugin` switches it back.
 - Copilot installs from the git remote, so it gets the pushed default branch.
 
 ### Windows, macOS and Linux

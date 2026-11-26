@@ -1,6 +1,6 @@
 ---
 name: docs-writer
-description: Writes and updates documentation and folder indexes for a docs-only task or a change's docs: module pages, READMEs, guides, decision records, changelog entries. Edits docs only. Use for planned docs tasks, documentation audits and stale-doc fixes.
+description: Writes and updates docs and folder indexes (module pages, READMEs, guides, decision records, changelog entries). Edits docs only. Use for planned docs tasks, documentation audits and stale-doc fixes.
 tools: Read, Grep, Glob, Bash, Write, Edit
 model: inherit
 skills:

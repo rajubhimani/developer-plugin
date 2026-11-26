@@ -9,6 +9,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 MANIFESTS = [ROOT / "plugin.json", ROOT / ".claude-plugin" / "plugin.json"]
 MAX_AGE_DAYS = 90
+MAX_DESCRIPTION = 300  # characters; descriptions load into every session
+MAX_BODY_LINES = 500  # a skill body past this should move detail into references/
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 
@@ -43,6 +45,20 @@ def main() -> int:
     if len(versions) != 1:
         problems.append(f"versions differ: {sorted(versions)}")
 
+    # What a stranger sees when they add the marketplace: it must name an owner and say
+    # what it offers, and it must list this plugin under the plugin's own name.
+    market = load(ROOT / ".claude-plugin" / "marketplace.json")
+    if not market.get("owner", {}).get("name"):
+        problems.append("marketplace.json: owner.name is missing")
+    if not market.get("metadata", {}).get("description"):
+        problems.append("marketplace.json: metadata.description is missing")
+    if [entry.get("name") for entry in market.get("plugins", [])] != sorted(names):
+        problems.append("marketplace.json: plugins must list this plugin by its manifest name")
+    for doc in docs:
+        for key in ("author", "homepage", "repository"):
+            if not doc.get(key):
+                problems.append(f"plugin manifest: {key} is missing (needed to share the plugin)")
+
     for skill in sorted((ROOT / "skills").glob("*/SKILL.md")):
         fields = frontmatter(skill)
         folder = skill.parent.name
@@ -52,6 +68,12 @@ def main() -> int:
             problems.append(f"{folder}: name must be kebab-case")
         if not fields.get("description"):
             problems.append(f"{folder}: description missing")
+        elif len(fields["description"]) > MAX_DESCRIPTION:
+            problems.append(f"{folder}: description is {len(fields['description'])} characters; keep it under "
+                            f"{MAX_DESCRIPTION} (it loads into every session)")
+        lines = len(skill.read_text(encoding="utf-8").splitlines())
+        if lines > MAX_BODY_LINES:
+            problems.append(f"{folder}: SKILL.md is {lines} lines; keep it under {MAX_BODY_LINES} and move detail to references/")
         checked = fields.get("verified", "")
         try:
             age = (dt.date.today() - dt.date.fromisoformat(checked)).days
@@ -69,6 +91,9 @@ def main() -> int:
             problems.append(f"agents/{agent.stem}: name must be kebab-case")
         if not fields.get("description"):
             problems.append(f"agents/{agent.stem}: description missing")
+        elif len(fields["description"]) > MAX_DESCRIPTION:
+            problems.append(f"agents/{agent.stem}: description is {len(fields['description'])} characters; "
+                            f"keep it under {MAX_DESCRIPTION} (it loads into every session)")
         if not fields.get("tools"):
             problems.append(f"agents/{agent.stem}: tools must be listed explicitly")
         if "memory" in fields:

@@ -1,6 +1,6 @@
 ---
 name: design-patterns
-description: Choosing and applying design patterns and design principles (composition over inheritance, small interfaces, dependency inversion), and knowing when not to. Use when designing a module, adding an abstraction, or reviewing code that looks over-engineered or tangled.
+description: Design patterns and principles (composition, small interfaces, dependency inversion), and when not to use them. Use when designing a module, adding an abstraction, or reviewing over-engineered or tangled code.
 verified: 2026-11-19
 ---
 

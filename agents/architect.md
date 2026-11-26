@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Designs a feature from approved requirements: a short design note with components, contracts, data, failure modes, risk per requirement, security and deployment notes, and the slices to build. Never edits a requirement. Use after requirements are approved and before planning.
+description: Designs a feature from approved requirements: components, contracts, data, failure modes, risk per requirement, slices to build. Never edits a requirement. Use after requirements are approved and before planning.
 tools: Read, Grep, Glob, Bash, Write, Edit
 model: inherit
 skills:
