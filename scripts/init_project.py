@@ -3,6 +3,7 @@
 Usage: python3 scripts/init_project.py <repo folder> <language>
            [--kind KIND] [--name NAME] [--members name:kind,...] [--module PATH]
            [--structure best-practice|own] [--no-input]
+       python3 scripts/init_project.py <repo folder> <language> --update [--dry-run]
 
 Languages: python, go, rust, node, c, cpp, java. Each run reports which files it
 created and which it kept because they already existed.
@@ -17,8 +18,12 @@ moved or replaced.
 In an existing project the owner also chooses a *structure*: `best-practice` (move toward the
 recommended layout; a plan is written and nothing moves without approval) or `own` (keep the
 layout; it is recorded in docs/project-structure.md and the plugin works inside it). A
-terminal asks once; without one an existing project keeps its own structure. Standard
-library only.
+terminal asks once; without one an existing project keeps its own structure.
+
+The files the plugin writes are recorded with a hash in .developer-plugin/scaffold.json. Later,
+`--update` brings the project to this plugin version without touching your work: files you have
+not edited are refreshed, edited ones are kept and shown as a diff, new ones are created, and
+nothing is deleted. `--dry-run` shows the plan. Standard library only.
 """
 
 from __future__ import annotations
@@ -32,8 +37,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import project_kinds as pk  # noqa: E402
+import scaffold as sc  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
+USER_OWNED = {pk.NOTE_FILE, pk.PLAN_FILE}  # written from facts or edited by hand; never refreshed
 TEMPLATES = ROOT / "templates"
 LANGUAGES = ("python", "go", "rust", "node", "c", "cpp", "java")
 SHARED = ("Dockerfile", "compose.yaml", ".dockerignore", ".editorconfig", ".gitignore",
@@ -188,8 +195,9 @@ def kind_files(language: str, repo: Path, kind: pk.Kind, kinds: dict[str, pk.Kin
     return files, profile
 
 
-def write_new(repo: Path, files: dict[str, str]) -> None:
-    """Create files that do not exist yet; report what was created and kept."""
+def write_new(repo: Path, files: dict[str, str]) -> list[str]:
+    """Create files that do not exist yet; report what was created and kept; return the created paths."""
+    created = []
     for relative, text in files.items():
         target = repo / relative
         if target.exists():
@@ -198,6 +206,77 @@ def write_new(repo: Path, files: dict[str, str]) -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(text, encoding="utf-8")
         print(f"created {relative}")
+        created.append(relative)
+    return created
+
+
+def plugin_version() -> str:
+    """Return the plugin's own version."""
+    import json
+    return str(json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))["version"])
+
+
+def record_scaffold(repo: Path, written: list[str]) -> None:
+    """Record the hash of each file the plugin wrote, as it is on disk now."""
+    known = {str(k): str(v) for k, v in dict(sc.read(repo).get("files", {})).items()}  # type: ignore[call-overload]
+    for relative in written:
+        if relative not in USER_OWNED and (repo / relative).is_file():
+            known[relative] = sc.file_hash(repo / relative)
+    sc.write(repo, plugin_version(), known)
+
+
+def clean_tree(repo: Path) -> bool:
+    """True when the folder is not a git repository, or git shows no uncommitted change."""
+    if not (repo / ".git").exists() or shutil.which("git") is None:
+        return True
+    done = subprocess.run(["git", "status", "--porcelain"], cwd=repo, capture_output=True, text=True, check=False)
+    return done.returncode != 0 or not done.stdout.strip()
+
+
+def run_update(args: argparse.Namespace, repo: Path, planned: dict[str, str]) -> int:
+    """Bring a project made by the plugin to this plugin version, never overwriting an edit."""
+    if not args.dry_run and not clean_tree(repo):
+        print("error: the working tree has uncommitted changes. Commit or stash them first so the update is "
+              "its own change you can review (or add --dry-run to only look).", file=sys.stderr)
+        return 1
+    state = sc.read(repo)
+    recorded = str(state.get("version", ""))
+    now = plugin_version()
+    older = bool(recorded) and tuple(int(x) for x in now.split(".")[:3]) < tuple(int(x) for x in recorded.split(".")[:3])
+    if older and not args.confirm_update:
+        print(f"error: this project was last updated by plugin {recorded}, which is newer than this copy ({now}). "
+              "Updating would move it backwards. Add --confirm-update to do it anyway.", file=sys.stderr)
+        return 1
+    known = {str(k): str(v) for k, v in dict(state.get("files", {})).items()}  # type: ignore[call-overload]
+    if "Makefile" in planned and TASK_MARKER not in planned["Makefile"]:
+        # Task targets are appended after the Makefile is written; compare it in that final form.
+        block = (TEMPLATES / "makefiles" / "tasks.mk").read_text(encoding="utf-8")
+        planned = {**planned, "Makefile": planned["Makefile"].rstrip("\n") + "\n\n" + block}
+    result = sc.classify(repo, planned, known, USER_OWNED)
+    print(f"Updating to plugin {now}" + (f" (from {recorded})" if recorded else " (no earlier record)")
+          + (" - dry run, nothing will be written" if args.dry_run else ""))
+    for label, key in (("create ", "created"), ("refresh", "updated")):
+        for relative in result[key]:
+            print(f"{label} {relative}")
+    for relative in result["edited"]:
+        print(f"kept    {relative} (you edited it; the plugin's version differs)")
+        print(sc.diff((repo / relative).read_text(encoding="utf-8", errors="replace"), planned[relative], relative))
+    for relative in result["foreign"]:
+        print(f"kept    {relative} (not written by the plugin)")
+    for relative in result["orphans"]:
+        print(f"orphan  {relative} (the plugin no longer writes it; delete it if you do not need it)")
+    print(f"{len(result['created'])} to create, {len(result['updated'])} to refresh, {len(result['unchanged'])} unchanged, "
+          f"{len(result['edited'])} edited by you, {len(result['foreign'])} not ours, {len(result['orphans'])} orphan(s)")
+    if args.dry_run:
+        return 0
+    for relative in [*result["created"], *result["updated"]]:
+        target = repo / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(planned[relative], encoding="utf-8")
+    for message in add_task_tracking(repo):
+        print(message)
+    record_scaffold(repo, [*result["created"], *result["updated"], *result["unchanged"]])
+    return 0
 
 
 def choose(args: argparse.Namespace, repo: Path, kinds: dict[str, pk.Kind],
@@ -318,13 +397,24 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--structure", choices=pk.STRUCTURES,
                         help="in an existing project: follow best practice, or keep its own structure")
     parser.add_argument("--no-input", action="store_true", help="never ask questions")
+    parser.add_argument("--update", action="store_true",
+                        help="bring a project made by the plugin to this plugin version, keeping your edits")
+    parser.add_argument("--dry-run", action="store_true", help="with --update: show the plan, write nothing")
+    parser.add_argument("--confirm-update", action="store_true", help="with --update: allow moving a project backwards")
     args = parser.parse_args(argv)
+    if args.dry_run and not args.update:
+        print("error: --dry-run goes with --update", file=sys.stderr)
+        return 1
     repo = args.repo.expanduser().resolve()
     if not repo.is_dir():
         print(f"not a folder: {repo}", file=sys.stderr)
         return 1
     kinds = pk.load_kinds(args.language)
     profile = pk.read_profile(repo)
+    if args.update and profile is None:
+        print(f"error: {pk.PROFILE.as_posix()} not found. --update is for a project the plugin already set up; "
+              "run without --update first.", file=sys.stderr)
+        return 1
     if profile and args.kind and (args.kind != profile.get("kind") or args.language != profile.get("language")):
         print(f"error: this project is recorded as a {profile.get('language')} {profile.get('kind')} "
               f"({pk.PROFILE.as_posix()}). To change it, delete that file and run again; existing files are kept.",
@@ -372,13 +462,15 @@ def main(argv: list[str]) -> int:
             common[pk.NOTE_FILE] = pk.structure_note(str(choice["name"]), args.language, kind.title, facts)
             profile_record["required"] = [pk.NOTE_FILE]
             profile_record["layout"] = facts
+        if args.update:
+            return run_update(args, repo, common)
         print(f"Project kind: {kind.title} ({kind.name}); structure: "
               + ("keep its own" if structure == "own" else "best practice")
               + (" - existing project, adding safe files only" if adopting else ""))
         if structure == "own" and decided == "default" and existing:
             print("This project already has code, so its own structure is kept. To move toward the "
                   "recommended layout instead, run again with --structure best-practice.")
-        write_new(repo, common)
+        created = write_new(repo, common)
         if profile is None:
             pk.write_profile(repo, profile_record)
             print(f"recorded {pk.PROFILE.as_posix()} (you will not be asked again)")
@@ -395,6 +487,8 @@ def main(argv: list[str]) -> int:
     set_commit_template(repo)
     for message in add_task_tracking(repo):
         print(message)
+    if choice is not None:
+        record_scaffold(repo, created)
     if profile_record is not None:
         print("Next: fill the <placeholders> (run `python3 scripts/check_structure.py .` to list them), "
               "then `make install` and `make check`.")

@@ -202,6 +202,14 @@ without a terminal; the default is `own`). The answer is recorded as `structure`
 Either choice can be switched later by running init with the other value. A new, empty folder
 gets the recommended layout without the question.
 
+**Keeping a project current.** The files the plugin writes are recorded with a hash in
+`.developer-plugin/scaffold.json`. After the plugin is updated, run
+`make init-project REPO=<folder> LANG=<language> UPDATE=1` (add `DRY=1` to only look). Files you
+have not touched are refreshed, ones you edited are kept and shown as a diff, missing ones are
+created, and nothing is deleted (files the plugin no longer writes are listed as orphans). It
+needs a clean git tree so the update is its own reviewable change, and it refuses to move a
+project to an older plugin version without `--confirm-update`.
+
 For Python, `make init-project` also copies a uv multi-stage `Dockerfile`, a Compose
 stack, `.env.example`, `.dockerignore` and `src/app/settings.py`, and `make check`
 runs `make check-env`. That check fails when the Settings fields, `.env.example` and

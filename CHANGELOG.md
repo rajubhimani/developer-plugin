@@ -4,6 +4,14 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+- Projects can now be brought up to date. New projects record a hash of every file the plugin wrote in
+  `.developer-plugin/scaffold.json`, and `init_project.py --update` (`make init-project ... UPDATE=1`,
+  `DRY=1` to look) refreshes only files nobody edited, keeps and diffs the ones you edited, creates missing
+  ones and deletes nothing (files the plugin no longer writes are listed as orphans). It needs a clean git
+  tree, refuses to move a project backwards without `--confirm-update`, and never touches the note or plan of
+  an owner's own structure. Before this, a project forked from the templates on day one and never got
+  improvements.
+
 - A machine check for gamed tests. `scripts/check_tests_honest.py` (`make honest-tests`, also
   copied into new projects) fails when a branch adds a skip, disable, ignore or focus marker,
   removes assertions beyond those it adds, or deletes a test file. A deliberate skip carries

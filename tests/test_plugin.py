@@ -1733,6 +1733,121 @@ class InstallManifestTests(unittest.TestCase):
         self.assertEqual(legacy.returncode, 2)
 
 
+class ScaffoldUpdateTests(unittest.TestCase):
+    """--update brings a project to this plugin version without touching anything the owner edited."""
+
+    def made(self, *flags: str) -> Path:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        done = run([sys.executable, str(SCRIPTS / "init_project.py"), str(root), "python", *flags])
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return root
+
+    def commit(self, root: Path) -> None:
+        for args in (["add", "-A"], ["commit", "-q", "-m", "state"]):
+            done = run(["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@example.com", *args])
+            self.assertEqual(done.returncode, 0, done.stderr)
+
+    def update(self, root: Path, *flags: str) -> subprocess.CompletedProcess:
+        return run([sys.executable, str(SCRIPTS / "init_project.py"), str(root), "python", "--update", *flags])
+
+    def record(self, root: Path) -> dict:
+        return json.loads((root / ".developer-plugin" / "scaffold.json").read_text(encoding="utf-8"))
+
+    def test_init_records_a_hash_for_each_file_it_wrote(self) -> None:
+        root = self.made("--kind", "library", "--name", "demo")
+        files = self.record(root)["files"]
+        for name in ("Makefile", ".editorconfig", "scripts/tasks.py", "tests/alignment/test_alignment.py"):
+            self.assertIn(name, files)
+        self.assertEqual(self.record(root)["version"], json.loads((ROOT / "plugin.json").read_text())["version"])
+
+    def test_an_untouched_project_is_unchanged_by_an_update(self) -> None:
+        root = self.made("--kind", "library", "--name", "demo")
+        self.commit(root)
+        result = self.update(root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("0 to create, 0 to refresh", result.stdout)
+        self.assertEqual(run(["git", "-C", str(root), "status", "--porcelain"]).stdout.strip(), "")
+
+    def test_update_never_overwrites_an_edit_and_never_deletes(self) -> None:
+        root = self.made("--kind", "library", "--name", "demo")
+        (root / ".editorconfig").write_text((root / ".editorconfig").read_text() + "# mine\n", encoding="utf-8")
+        (root / "CHANGELOG.md").unlink()
+        old = "an older plugin wrote this\n"
+        (root / ".gitmessage").write_text(old, encoding="utf-8")
+        import hashlib
+        record = self.record(root)
+        record["files"][".gitmessage"] = hashlib.sha256(old.encode()).hexdigest()
+        record["files"]["scripts/retired.py"] = "x"
+        (root / "scripts" / "retired.py").write_text("retired\n", encoding="utf-8")
+        (root / ".developer-plugin" / "scaffold.json").write_text(json.dumps(record), encoding="utf-8")
+        self.commit(root)
+        result = self.update(root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("# mine", (root / ".editorconfig").read_text(), "an edit is never overwritten")
+        self.assertIn("kept    .editorconfig (you edited it", result.stdout)
+        self.assertIn("-# mine", result.stdout, "the diff is shown")
+        self.assertTrue((root / "CHANGELOG.md").is_file(), "a missing file is created")
+        self.assertNotEqual((root / ".gitmessage").read_text(), old, "an untouched older file is refreshed")
+        self.assertTrue((root / "scripts" / "retired.py").is_file(), "nothing is deleted")
+        self.assertIn("orphan  scripts/retired.py", result.stdout)
+        self.commit(root)
+        again = self.update(root)
+        self.assertIn("0 to create, 0 to refresh", again.stdout, "a second update has nothing left to do")
+
+    def test_a_dry_run_writes_nothing_and_a_dirty_tree_is_refused(self) -> None:
+        root = self.made("--kind", "library", "--name", "demo")
+        (root / "CHANGELOG.md").unlink()
+        refused = self.update(root)
+        self.assertEqual(refused.returncode, 1)
+        self.assertIn("uncommitted changes", refused.stderr)
+        looked = self.update(root, "--dry-run")
+        self.assertEqual(looked.returncode, 0)
+        self.assertIn("create  CHANGELOG.md", looked.stdout)
+        self.assertFalse((root / "CHANGELOG.md").exists())
+
+    def test_update_needs_a_project_the_plugin_set_up(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.update(Path(tmp))
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("--update is for a project the plugin already set up", result.stderr)
+
+    def test_moving_a_project_backwards_needs_confirmation(self) -> None:
+        root = self.made("--kind", "library", "--name", "demo")
+        record = self.record(root)
+        record["version"] = "99.0.0"
+        (root / ".developer-plugin" / "scaffold.json").write_text(json.dumps(record), encoding="utf-8")
+        self.commit(root)
+        refused = self.update(root)
+        self.assertEqual(refused.returncode, 1)
+        self.assertIn("backwards", refused.stderr)
+        self.assertEqual(self.update(root, "--confirm-update").returncode, 0)
+
+    def test_an_owners_own_structure_note_is_never_touched_or_recorded(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        (root / "pyproject.toml").write_text('[project]\nname="m"\nversion="0.1"\n', encoding="utf-8")
+        (root / "m").mkdir()
+        (root / "m" / "__init__.py").write_text("", encoding="utf-8")
+        self.assertEqual(run([sys.executable, str(SCRIPTS / "init_project.py"), str(root), "python", "--kind", "library",
+                              "--name", "m", "--no-input"]).returncode, 0)
+        note = root / "docs" / "project-structure.md"
+        note.write_text(note.read_text() + "\n- our team rule\n", encoding="utf-8")
+        self.assertNotIn("docs/project-structure.md", self.record(root)["files"])
+        self.commit(root)
+        result = self.update(root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("- our team rule", note.read_text())
+        self.assertFalse((root / "src").exists(), "an update never creates a layout the owner declined")
+
+    def test_a_dry_run_without_update_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run([sys.executable, str(SCRIPTS / "init_project.py"), tmp, "python", "--dry-run"])
+            self.assertEqual(result.returncode, 1)
+
+
 class TestHonestyTests(unittest.TestCase):
     """The check sees what a machine can: skips added, assertions removed, test files deleted."""
 
