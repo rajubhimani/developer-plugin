@@ -325,3 +325,8 @@ This writes `docs/` and a VS Code `.code-workspace` file into that folder, plus
 `AGENTS.md` and `CLAUDE.md` if they are missing. Existing files you edited are
 kept. Running it inside a Claude Code session on a repo does the same check
 automatically.
+
+## License
+
+[MIT](LICENSE). You may use, copy, modify and share it, including commercially, as long as the
+copyright notice and licence text stay with it.

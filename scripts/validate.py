@@ -74,7 +74,11 @@ def main() -> int:
         problems.append("marketplace.json: metadata.description is missing")
     if [entry.get("name") for entry in market.get("plugins", [])] != sorted(names):
         problems.append("marketplace.json: plugins must list this plugin by its manifest name")
+    if not (ROOT / "LICENSE").is_file():
+        problems.append("LICENSE is missing (needed to share the plugin)")
     for doc in docs:
+        if doc.get("license") != "MIT":
+            problems.append("plugin manifest: license must be MIT, matching the LICENSE file")
         for key in ("author", "homepage", "repository"):
             if not doc.get(key):
                 problems.append(f"plugin manifest: {key} is missing (needed to share the plugin)")

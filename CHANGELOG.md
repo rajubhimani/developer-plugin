@@ -4,6 +4,9 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+- Added the MIT licence (`LICENSE`, and `license` in both manifests, which `make check` now requires), so the
+  plugin can be used and shared by others.
+
 - Projects can now be brought up to date. New projects record a hash of every file the plugin wrote in
   `.developer-plugin/scaffold.json`, and `init_project.py --update` (`make init-project ... UPDATE=1`,
   `DRY=1` to look) refreshes only files nobody edited, keeps and diffs the ones you edited, creates missing

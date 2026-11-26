@@ -16,5 +16,6 @@
     "url": "https://github.com/rajubhimani"
   },
   "homepage": "https://github.com/rajubhimani/developer-plugin",
-  "repository": "https://github.com/rajubhimani/developer-plugin"
+  "repository": "https://github.com/rajubhimani/developer-plugin",
+  "license": "MIT"
 }
