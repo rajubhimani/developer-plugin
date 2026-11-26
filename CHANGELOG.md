@@ -4,6 +4,22 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+- A machine check for gamed tests. `scripts/check_tests_honest.py` (`make honest-tests`, also
+  copied into new projects) fails when a branch adds a skip, disable, ignore or focus marker,
+  removes assertions beyond those it adds, or deletes a test file. A deliberate skip carries
+  `honest-ok: <reason>`. The builder runs it, the reviewer quotes it, and the testing skill says
+  what it cannot see.
+- New projects get `.claude/settings.example.json`: routine make targets and read-only git allowed,
+  force push and `rm -rf` denied, and no stdin interpreter or container exec, so routine commands
+  stop asking without opening a prompt-injection path.
+- The code review checklist marks the items a command decides, and tells the reviewer to confirm a
+  quoted result for the current commit instead of running the command again.
+- Agents start small. Claude Code injects the full text of every skill in an agent's `skills` list, and
+  ours preloaded 3 to 16 skills each. Each agent now preloads 2 or 3 and loads the rest on demand with
+  the Skill tool (a Load on demand section says when). One dispatch of an agent used to cost about
+  3,000 to 15,500 tokens and now costs about 1,400 to 3,000; across the 12 agents that is 23,400 tokens
+  instead of about 89,600. `make check` fails on a missing skill name, a preload over 3,000 tokens, or
+  a Load on demand section without the Skill tool.
 - The version level is now derived, not guessed. `scripts/surface.py` lists what users can name
   (skills, agents, project kinds, make commands) and compares it with the last release tag:
   `make release-level` prints the lowest level the changes allow, `make release LEVEL=auto` uses

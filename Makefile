@@ -23,6 +23,7 @@
 #   make structure-check REPO=... check a project's layout against its recorded kind
 #   make versions                 print the current stable release of common tools
 #   make token-cost               estimate what the plugin costs in context
+#   make honest-tests             fail if this branch weakened the tests (BASE=<ref>)
 
 PY       := python3
 PLUGIN   := developer-plugin
@@ -32,7 +33,7 @@ PROJECTS ?=
 .DEFAULT_GOAL := help
 .PHONY: help test check validate sync-rules release release-level releases install-claude uninstall-claude \
 	install-codex uninstall-codex install-antigravity uninstall-antigravity install-copilot \
-	install-all update-clis check-install navigator workspace versions init-project structure-check token-cost
+	install-all update-clis check-install navigator workspace versions init-project structure-check token-cost honest-tests
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-22s %s\n", $$1, $$2}'
@@ -110,3 +111,6 @@ structure-check: ## Check REPO's layout against its recorded project kind (read-
 
 token-cost: ## Estimate what the plugin costs in context (always loaded versus on use)
 	@$(PY) scripts/token_cost.py
+
+honest-tests: ## Fail if this branch weakened the tests (BASE=<ref>, default origin/main)
+	@$(PY) scripts/check_tests_honest.py $(if $(BASE),--base $(BASE),)

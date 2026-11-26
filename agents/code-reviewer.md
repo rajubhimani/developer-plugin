@@ -29,7 +29,8 @@ and infer it from the task or requirement files.
    Run formatters and tests in check mode, never with autofix.
 4. To probe a test, break one guarded clause on a copy outside the working tree.
    Never run a probe, restore or check out files in the shared tree.
-5. Check deprecations: a deprecated API, option or dependency that the change adds
+5. Run `make honest-tests` against the branch's base and quote the result; judge
+   what it cannot see. Check deprecations: a deprecated API, option or dependency that the change adds
    or leaves in code it touches is a finding that names the replacement.
 6. Leave no process running (see `shell-hygiene`).
 

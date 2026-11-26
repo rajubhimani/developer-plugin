@@ -26,8 +26,8 @@ command. Open the files; do not rely on the brief's summary.
 3. Refactor while green, in small steps, running the tests after each.
 4. Update the docs for the behaviour you changed: the module page, the README
    index for any folder you touched, and any doc the search for old names finds.
-5. Run the project's single check command (`make check`). Warnings count as
-   failures. Run the changed behaviour once for real if no test reaches it, and
+5. Run the project's single check command (`make check`) and `make honest-tests`.
+   Warnings count as failures. Run the changed behaviour once for real if no test reaches it, and
    record the command and what you saw.
 6. Leave the working tree clean of stray files. Commit only if the person asked;
    follow `git-workflow`.

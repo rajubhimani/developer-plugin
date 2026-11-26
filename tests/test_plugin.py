@@ -1733,6 +1733,88 @@ class InstallManifestTests(unittest.TestCase):
         self.assertEqual(legacy.returncode, 2)
 
 
+class TestHonestyTests(unittest.TestCase):
+    """The check sees what a machine can: skips added, assertions removed, test files deleted."""
+
+    BASE = "def test_a():\n    assert 1 == 1\n    assert 2 == 2\n"
+
+    def repo(self) -> Path:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        (root / "tests").mkdir()
+        (root / "tests" / "test_a.py").write_text(self.BASE, encoding="utf-8")
+        (root / "src.py").write_text("x = 1\n", encoding="utf-8")
+        self.git(root, "init", "-q")
+        self.git(root, "add", "-A")
+        self.git(root, "commit", "-q", "-m", "base")
+        return root
+
+    def git(self, root: Path, *args: str) -> None:
+        done = run(["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@example.com", *args])
+        self.assertEqual(done.returncode, 0, done.stderr)
+
+    def verdict(self, root: Path) -> subprocess.CompletedProcess:
+        self.git(root, "add", "-A")
+        self.git(root, "commit", "-q", "-m", "change")
+        return run([sys.executable, str(SCRIPTS / "check_tests_honest.py"), "--base", "HEAD~1"], cwd=root)
+
+    def test_a_clean_change_passes(self) -> None:
+        root = self.repo()
+        (root / "tests" / "test_a.py").write_text(self.BASE + "def test_b():\n    assert 3 == 3\n", encoding="utf-8")
+        (root / "src.py").write_text("x = 2  # skip this\n", encoding="utf-8")
+        self.assertEqual(self.verdict(root).returncode, 0)
+
+    def test_an_added_skip_marker_fails(self) -> None:
+        for marker in ("@pytest.mark.skip\n", "@pytest.mark.xfail\n", "@unittest.skip('later')\n"):
+            root = self.repo()
+            (root / "tests" / "test_a.py").write_text(marker + self.BASE, encoding="utf-8")
+            result = self.verdict(root)
+            self.assertEqual(result.returncode, 1, marker)
+            self.assertIn("adds a skip or focus marker", result.stdout)
+
+    def test_other_languages_markers_fail(self) -> None:
+        for name, text in (("a.test.ts", "it.only('x', () => {})\n"), ("a_test.go", "t.Skip(\"no\")\n"),
+                           ("tests/a.rs", "#[ignore]\n"), ("tests/ATest.java", "@Disabled\n")):
+            root = self.repo()
+            target = root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text, encoding="utf-8")
+            self.assertEqual(self.verdict(root).returncode, 1, name)
+
+    def test_a_removed_assertion_fails_and_a_replaced_one_does_not(self) -> None:
+        root = self.repo()
+        (root / "tests" / "test_a.py").write_text("def test_a():\n    assert 1 == 1\n", encoding="utf-8")
+        result = self.verdict(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("1 assertion(s) removed", result.stdout)
+        root = self.repo()
+        (root / "tests" / "test_a.py").write_text("def test_a():\n    assert 1 == 1\n    assert 3 == 3\n", encoding="utf-8")
+        self.assertEqual(self.verdict(root).returncode, 0)
+
+    def test_a_deleted_test_file_fails(self) -> None:
+        root = self.repo()
+        (root / "tests" / "test_a.py").unlink()
+        result = self.verdict(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("test file deleted", result.stdout)
+
+    def test_a_deliberate_skip_with_a_reason_is_allowed(self) -> None:
+        root = self.repo()
+        (root / "tests" / "test_a.py").write_text("# honest-ok: needs docker\n@pytest.mark.skip  # honest-ok: needs docker\n" + self.BASE, encoding="utf-8")
+        self.assertEqual(self.verdict(root).returncode, 0)
+        root = self.repo()
+        (root / "tests" / "test_a.py").write_text("@pytest.mark.skip  # honest-ok:\n" + self.BASE, encoding="utf-8")
+        self.assertEqual(self.verdict(root).returncode, 1, "a reason is required")
+
+    def test_new_projects_get_the_check_and_a_make_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            made = run([sys.executable, str(SCRIPTS / "init_project.py"), tmp, "python", "--kind", "library", "--name", "fresh"])
+            self.assertEqual(made.returncode, 0, made.stderr)
+            self.assertTrue((Path(tmp) / "scripts" / "check_tests_honest.py").is_file())
+            self.assertIn("honest-tests:", (Path(tmp) / "Makefile").read_text(encoding="utf-8"))
+
+
 class SurfaceTests(unittest.TestCase):
     """The public surface decides the lowest version level, and removals need a warning first."""
 

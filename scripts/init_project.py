@@ -87,10 +87,16 @@ def plan(language: str, kind: pk.Kind | None = None) -> list[tuple[Path, Path]]:
     ]
     pairs.append((TEMPLATES / "claude" / "settings.example.json", Path(".claude/settings.example.json")))
     pairs.append((ROOT / "scripts" / "tasks.py", Path("scripts/tasks.py")))
+    pairs.append((ROOT / "scripts" / "check_tests_honest.py", Path("scripts/check_tests_honest.py")))
     pairs.append((ROOT / "skills" / "ci-cd" / "references" / "github-actions.yml",
                   Path(".github/workflows/ci.yml")))
     return pairs
 
+
+HONEST_TARGET = """
+honest-tests: ## Fail if this branch weakened the tests (BASE=<ref>, default origin/main)
+\tpython3 scripts/check_tests_honest.py $(if $(BASE),--base $(BASE),)
+"""
 
 STRUCTURE_TARGET = """
 structure-check: ## Check the layout matches the project kind (.developer-plugin/project.json)
@@ -101,8 +107,8 @@ structure-check: ## Check the layout matches the project kind (.developer-plugin
 def with_structure_check(makefile: str) -> str:
     """Add a structure-check target and make `check` depend on it."""
     text = re.sub(r"(?m)^(check:[^#\n]*?)(\s*##.*|\s*)$", lambda m: f"{m.group(1).rstrip()} structure-check{m.group(2)}", makefile, count=1)
-    text = re.sub(r"(?m)^(\.PHONY:.*)$", lambda m: m.group(1) + " structure-check", text, count=1)
-    return text.rstrip("\n") + "\n" + STRUCTURE_TARGET
+    text = re.sub(r"(?m)^(\.PHONY:.*)$", lambda m: m.group(1) + " structure-check honest-tests", text, count=1)
+    return text.rstrip("\n") + "\n" + STRUCTURE_TARGET + HONEST_TARGET
 
 
 def common_files(language: str, kind: pk.Kind | None) -> dict[str, str]:

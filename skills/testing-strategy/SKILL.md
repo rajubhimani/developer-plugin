@@ -1,7 +1,7 @@
 ---
 name: testing-strategy
 description: How many tests and where, test-first order, honest tests, small reliable suites. Use when planning tests for a change, writing a failing test first, or reviewing whether tests guard behaviour.
-verified: 2026-11-17
+verified: 2026-11-26
 ---
 
 # Testing strategy
@@ -59,6 +59,10 @@ instead.
 - Look for signs of gaming: literals from test fixtures inside production code,
   branches keyed on test inputs, results returned as the expected value,
   skipped or focused tests, removed assertions.
+- A script sees the mechanical part: `make honest-tests` (or `python3 scripts/check_tests_honest.py
+  --base <ref>`) fails on a skip or focus marker the branch adds, assertions it removes, or a test
+  file it deletes. A deliberate skip carries `honest-ok: <reason>` on its line. Special-cased
+  inputs and tests that cannot fail stay your job.
 - A green unit suite does not prove a screen, a deploy or a script works. Run
   the real thing once and record the command and what you saw.
 
