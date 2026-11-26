@@ -1465,7 +1465,11 @@ class ClaudeInstallTests(unittest.TestCase):
         self.copy = root / "own" / "claude"
         self.legacy = root / "claude" / "marketplaces" / "developer-plugin-local"
         self.fake = FakeClaude(managed=root / "claude" / "marketplaces")
-        for name, value in (("tool", lambda name: "claude"), ("run", self.fake.run),
+        # Only the claude command is faked. git and the rest stay real, and the test must not need
+        # a claude binary: CI machines have none.
+        real_tool = self.module.tool
+        for name, value in (("tool", lambda name: "claude" if name == "claude" else real_tool(name)),
+                            ("run", self.fake.run),
                             ("claude_json", self.fake.json), ("claude_copy", lambda: self.copy),
                             ("legacy_claude_copy", lambda: self.legacy)):
             patcher = mock.patch.object(self.module, name, value)
