@@ -4,6 +4,14 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+- A git guard for agents. `scripts/block_dangerous_git.py` is a Claude Code hook that blocks force and
+  delete pushes, `reset --hard`, `clean -f`, `branch -D`, `checkout .`, `restore .` and `stash drop`/`clear`
+  before they run, and allows ordinary git. It reads the command with a shell tokenizer, so
+  `git -C repo push --force` and `make test && git reset --hard` are caught while `echo "git push -f"` is not,
+  and it is plain Python so it works on Windows. New projects get the script and the hook wiring in
+  `.claude/settings.example.json`. Confirmed in a real session: a `git reset --hard` was blocked and the
+  uncommitted change survived.
+
 - A `handoff` skill: write a short note so a fresh session can continue the work (goal, state, decisions,
   where things are, how to check, next step), saved to the temp folder, never committed. It is manual-only
   (`disable-model-invocation`), and a fresh session was confirmed not to see it, so it adds nothing to the

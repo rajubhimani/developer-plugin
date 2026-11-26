@@ -919,6 +919,63 @@ class MaintainedCodeTests(unittest.TestCase):
         self.assertNotIn("dev-dependencies", python_dev)  # [dependency-groups] replaced it
 
 
+class GitGuardTests(unittest.TestCase):
+    """The git guard blocks commands that destroy work and lets everything else through."""
+
+    BLOCKED = ["git push --force", "git push -f origin x", "git push --force-with-lease", "git push origin +main",
+               "git push origin :old", "git push --delete origin x", "git -C repo push --force",
+               "make test && git reset --hard HEAD~1", "git reset --hard", "git clean -fd", "git branch -D old",
+               "git checkout .", "git checkout -f main", "git restore .", "git stash drop", "git stash clear",
+               "/usr/bin/git reset --hard", "sudo git push -f", "FOO=1 git push -f", "cd x; git push --force",
+               "git push -f 'unbalanced"]
+    ALLOWED = ["git push", "git push origin feature", "git push -u origin feature", "git reset --soft HEAD~1",
+               "git clean -n", "git clean -fdn", "git branch -d old", "git branch --show-current", "git checkout main",
+               "git checkout -b new", "git restore --staged .", "git restore file.txt", "git stash", "git stash pop",
+               "git status", "git commit --amend -m x", 'echo "git push -f"', "grep -r 'git clean -f' docs",
+               "git log --oneline | head", "git push 'unbalanced"]
+
+    def guard(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("guard", SCRIPTS / "block_dangerous_git.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_dangerous_commands_are_blocked(self) -> None:
+        guard = self.guard()
+        for command in self.BLOCKED:
+            with self.subTest(command=command):
+                self.assertIsNotNone(guard.check(command))
+
+    def test_ordinary_commands_pass(self) -> None:
+        guard = self.guard()
+        for command in self.ALLOWED:
+            with self.subTest(command=command):
+                self.assertIsNone(guard.check(command))
+
+    def test_the_hook_protocol_uses_exit_code_two(self) -> None:
+        def call(command: str) -> subprocess.CompletedProcess:
+            return subprocess.run([sys.executable, str(SCRIPTS / "block_dangerous_git.py")], capture_output=True, text=True,
+                                  input=json.dumps({"tool_name": "Bash", "tool_input": {"command": command}}), check=False)
+        blocked, fine = call("git push --force"), call("git push")
+        self.assertEqual((blocked.returncode, fine.returncode), (2, 0))
+        self.assertIn("BLOCKED", blocked.stderr)
+        for odd in ("", "not json", "{}"):
+            done = subprocess.run([sys.executable, str(SCRIPTS / "block_dangerous_git.py")], capture_output=True, text=True,
+                                  input=odd, check=False)
+            self.assertEqual(done.returncode, 0, f"bad input must not block: {odd!r}")
+
+    def test_new_projects_get_the_guard_and_the_hook_that_runs_it(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(run([sys.executable, str(SCRIPTS / "init_project.py"), tmp, "python", "--kind", "library",
+                                  "--name", "fresh"]).returncode, 0)
+            self.assertTrue((Path(tmp) / "scripts" / "block_dangerous_git.py").is_file())
+            data = json.loads((Path(tmp) / ".claude" / "settings.example.json").read_text())
+            hook = data["hooks"]["PreToolUse"][0]
+            self.assertEqual(hook["matcher"], "Bash")
+            self.assertIn("block_dangerous_git.py", hook["hooks"][0]["command"])
+
+
 class ManualSkillTests(unittest.TestCase):
     """A skill only the person starts must stay out of the model's context."""
 

@@ -59,6 +59,11 @@ out any stdin interpreter (`python -`, `bash -c`) and container exec or run, on 
 reads text from strangers (issues, web pages), and those commands turn a planted instruction into
 data leaving the machine. Add a project command only as a fixed command, never a `*` wildcard.
 
+The same file wires a git guard (`scripts/block_dangerous_git.py`) as a hook. It blocks force and
+delete pushes, `reset --hard`, `clean -f`, `branch -D`, `checkout .`, `restore .` and `stash drop`
+before they run, reading the command as a shell would, so `git -C repo push --force` is caught and
+`echo "git push -f"` is not. A plain push or commit is allowed.
+
 ## After setup
 
 - Run `make check` to confirm the project passes. A new project is expected to
