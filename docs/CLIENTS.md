@@ -17,6 +17,14 @@ follows (see the README for the list). Only Claude Code reads them
 today. Codex, Copilot and Antigravity use their own agent formats, which are
 not generated or verified yet, so they still get the skills alone.
 
+Codex agents were tried and not adopted. The format is simple (one TOML file per agent in
+`.codex/agents/` with `name`, `description` and `developer_instructions`, and names limited to
+lowercase letters, digits and underscores), and the files generated from `agents/*.md` were valid.
+But a real Codex session (current release, trusted project) reported that no selectable `agent_type` is
+exposed, so the agents could not be spawned; this matches an open Codex issue about custom agents
+not reaching tool-backed sessions. Revisit when Codex fixes it, by re-running that listing test
+before writing any installer for it.
+
 ## Where each client keeps its copy
 
 Each install copies the plugin into the client's own folder, so deleting the
