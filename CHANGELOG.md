@@ -4,6 +4,8 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-27
+
 - Frontmatter is now valid YAML for every reader. 31 of the 66 skill and agent files had a `description` with an
   unquoted colon (many from the earlier description trimming), which Claude Code and Gemini's skill loader accept
   but a strict YAML parser rejects. Every description is now a quoted string, the generator for the
