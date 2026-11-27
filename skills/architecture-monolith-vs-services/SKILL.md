@@ -1,6 +1,6 @@
 ---
 name: architecture-monolith-vs-services
-description: Modular monolith or microservices: choose, set boundaries, avoid a distributed monolith. Use when designing architecture, deciding whether to split a service, or reviewing boundaries.
+description: "Modular monolith or microservices: choose, set boundaries, avoid a distributed monolith. Use when designing architecture, deciding whether to split a service, or reviewing boundaries."
 verified: 2026-11-07
 ---
 

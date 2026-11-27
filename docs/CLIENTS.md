@@ -9,13 +9,22 @@ own manifest. The table lists what each client needs and how it was checked.
 | Codex | `plugin.json` | `skills/` | `AGENTS.md` | not used | `make install-codex` | Installed and enabled from its own copy |
 | GitHub Copilot CLI | `plugin.json` (Agent Plugins 1.0) | `skills/` | not generated | not used | `make install-copilot` | Installed from GitHub; reinstall after the branch is merged |
 | Antigravity | `plugin.json` | `skills/` | `rules/AGENTS.md` | `hooks.json` at root | `make install-antigravity` | Copied; shows in the app's plugin list |
+| Gemini CLI | `gemini-extension.json` | `skills/` | not generated | not used | `gemini extensions install <repo url>` | Validated with `gemini extensions validate`; all 54 skills load, agents are not offered |
 
 ## Agents
 
-`agents/*.md` holds twelve role-named subagents, each preloading the skills it
+`claude-agents/*.md` holds twelve role-named subagents, each preloading the skills it
 follows (see the README for the list). Only Claude Code reads them
 today. Codex, Copilot and Antigravity use their own agent formats, which are
 not generated or verified yet, so they still get the skills alone.
+
+Codex agents were tried and not adopted. The format is simple (one TOML file per agent in
+`.codex/agents/` with `name`, `description` and `developer_instructions`, and names limited to
+lowercase letters, digits and underscores), and the files generated from `claude-agents/*.md` were valid.
+But a real Codex session (current release, trusted project) reported that no selectable `agent_type` is
+exposed, so the agents could not be spawned; this matches an open Codex issue about custom agents
+not reaching tool-backed sessions. Revisit when Codex fixes it, by re-running that listing test
+before writing any installer for it.
 
 ## Where each client keeps its copy
 

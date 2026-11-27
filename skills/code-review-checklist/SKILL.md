@@ -1,10 +1,14 @@
 ---
 name: code-review-checklist
-description: Review a code change for correctness, tests, security and clarity using a fixed checklist. Use when asked to review a diff, branch or pull request.
-verified: 2026-11-07
+description: "Review a code change for correctness, tests, security and clarity using a fixed checklist. Use when asked to review a diff, branch or pull request."
+verified: 2026-11-26
 ---
 
 # Code review checklist
+
+Items marked **(run)** are decided by a command. If the author's report quotes that command's
+result for the current commit, confirm the quote from the record instead of running it again; run
+it yourself only when the quote is missing, old or doubtful. Everything else needs your judgement.
 
 1. Read the full diff before commenting. Note what the change is meant to do.
 2. Correctness: check edge cases, error handling and off-by-one errors.
@@ -15,9 +19,9 @@ verified: 2026-11-07
    literals, constants), not only the lines in the diff. Check that a comment
    describing a removed item was moved or deleted, and that a type annotation is
    true for data loaded from files, not only for objects built in code.
-7. Run the real entry points after a refactor and read their output. Passing
+7. **(run)** Run the real entry points after a refactor and read their output. Passing
    tests can still hide a regression in logs, messages or printed values.
-8. Run the formatter check after every edit, including edits made in an editor.
+8. **(run)** Run the formatter check after every edit, including edits made in an editor.
 9. Reuse: flag a hand-written helper that a library the project already uses
    provides (mean, padding, counting), and any reduction over a possibly empty
    collection.

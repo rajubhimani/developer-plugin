@@ -4,6 +4,84 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-27
+
+- The `debug-failure` and `secrets-and-config` descriptions now name the cases where their skill was skipped: a
+  question about how to find the cause of a failure, and where a password, API key or token should live. Both
+  evals missed on some runs before; afterwards the full suite passed 40 of 40 (eight cases, five runs each).
+
+## [0.3.0] - 2026-11-27
+
+- Frontmatter is now valid YAML for every reader. 31 of the 66 skill and agent files had a `description` with an
+  unquoted colon (many from the earlier description trimming), which Claude Code and Gemini's skill loader accept
+  but a strict YAML parser rejects. Every description is now a quoted string, the generator for the
+  `coding-standards` skill writes it that way, and `make check` fails an unquoted one (and, where PyYAML is
+  installed, parses every frontmatter strictly). After the change, 3 of 8 eval cases were re-run and passed
+  9 of 9 (`git-workflow` 2 of 2 before a usage limit stopped the run); re-run `make evals` to cover the rest.
+
+- Gemini CLI support. `gemini-extension.json` (versioned with the other manifests, which `make check` and
+  `make release` keep in step) lets Gemini install the plugin from GitHub with `gemini extensions install`.
+  Checked with Gemini itself: it validates, and all the skills load. Gemini also loads any `agents/` folder
+  in an extension and rejected our Claude-format agents (`tools` as a string, a `skills` key), so the agent
+  files moved from `agents/` to `claude-agents/` and `.claude-plugin/plugin.json` now lists them. Claude Code
+  still finds all twelve (confirmed live) and Gemini reports no agent errors. `make check` fails if the list
+  and the folder disagree, and the version-level check treats the move as the same agents, not twelve removals.
+
+- Skill-triggering evals. `evals/` holds eight cases for `claude plugin eval`, each a realistic prompt with a
+  grader that checks the right skill was loaded (debug-failure, kubernetes, dependency-management, git-workflow,
+  testing-strategy, secrets-and-config, project-structure, docker). `make evals` runs them three times each (opt-in, about
+  $3 on your own account); `make check` runs a free static check that each case is well formed and names a real skill.
+  A control case with the wrong skill failed as it should. Against the current descriptions 40 of 41
+  runs loaded the right skill, so triggering is probabilistic and a case passes at two of three runs.
+
+- A git guard for agents. `scripts/block_dangerous_git.py` is a Claude Code hook that blocks force and
+  delete pushes, `reset --hard`, `clean -f`, `branch -D`, `checkout .`, `restore .` and `stash drop`/`clear`
+  before they run, and allows ordinary git. It reads the command with a shell tokenizer, so
+  `git -C repo push --force` and `make test && git reset --hard` are caught while `echo "git push -f"` is not,
+  and it is plain Python so it works on Windows. New projects get the script and the hook wiring in
+  `.claude/settings.example.json`. Confirmed in a real session: a `git reset --hard` was blocked and the
+  uncommitted change survived.
+
+- A `handoff` skill: write a short note so a fresh session can continue the work (goal, state, decisions,
+  where things are, how to check, next step), saved to the temp folder, never committed. It is manual-only
+  (`disable-model-invocation`), and a fresh session was confirmed not to see it, so it adds nothing to the
+  always-on cost. `make check` now also fails a skill file of 20,000 bytes or more, the point where Claude
+  Code cuts a re-attached skill after compaction.
+
+- Added the MIT licence (`LICENSE`, and `license` in both manifests, which `make check` now requires), so the
+  plugin can be used and shared by others.
+
+- Projects can now be brought up to date. New projects record a hash of every file the plugin wrote in
+  `.developer-plugin/scaffold.json`, and `init_project.py --update` (`make init-project ... UPDATE=1`,
+  `DRY=1` to look) refreshes only files nobody edited, keeps and diffs the ones you edited, creates missing
+  ones and deletes nothing (files the plugin no longer writes are listed as orphans). It needs a clean git
+  tree, refuses to move a project backwards without `--confirm-update`, and never touches the note or plan of
+  an owner's own structure. Before this, a project forked from the templates on day one and never got
+  improvements.
+
+- A machine check for gamed tests. `scripts/check_tests_honest.py` (`make honest-tests`, also
+  copied into new projects) fails when a branch adds a skip, disable, ignore or focus marker,
+  removes assertions beyond those it adds, or deletes a test file. A deliberate skip carries
+  `honest-ok: <reason>`. The builder runs it, the reviewer quotes it, and the testing skill says
+  what it cannot see.
+- New projects get `.claude/settings.example.json`: routine make targets and read-only git allowed,
+  force push and `rm -rf` denied, and no stdin interpreter or container exec, so routine commands
+  stop asking without opening a prompt-injection path.
+- The code review checklist marks the items a command decides, and tells the reviewer to confirm a
+  quoted result for the current commit instead of running the command again.
+- Agents start small. Claude Code injects the full text of every skill in an agent's `skills` list, and
+  ours preloaded 3 to 16 skills each. Each agent now preloads 2 or 3 and loads the rest on demand with
+  the Skill tool (a Load on demand section says when). One dispatch of an agent used to cost about
+  3,000 to 15,500 tokens and now costs about 1,400 to 3,000; across the 12 agents that is 23,400 tokens
+  instead of about 89,600. `make check` fails on a missing skill name, a preload over 3,000 tokens, or
+  a Load on demand section without the Skill tool.
+- The version level is now derived, not guessed. `scripts/surface.py` lists what users can name
+  (skills, agents, project kinds, make commands) and compares it with the last release tag:
+  `make release-level` prints the lowest level the changes allow, `make release LEVEL=auto` uses
+  it, and a lower level is refused. A removal needs a deprecation first (`deprecations.json`) or
+  a major release (a minor one before 1.0); `make check` fails one that has neither. CI now
+  fetches tags and history so the comparison can run.
+
 ## [0.2.0] - 2026-11-25
 
 - Your project, your structure. In a folder that already holds code, `init_project.py` now asks

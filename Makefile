@@ -14,14 +14,18 @@
 #   make uninstall-claude         remove the Claude Code install and its copy
 #   make uninstall-codex          remove the Codex install and its copy
 #   make uninstall-antigravity    remove the Antigravity copy
-#   make release LEVEL=minor      bump the version and close the changelog section
+#   make release LEVEL=minor      bump the version and close the changelog section (LEVEL=auto picks the lowest allowed)
+#   make release-level            the lowest level the changes since the last tag allow
 #   make releases                 list released versions (git tags)
 #   make navigator PROJECTS=...   rewrite the projects docs
 #   make workspace PROJECTS=...   create or refresh project docs
 #   make init-project REPO=... LANG=... [KIND=... NAME=... MEMBERS=a:kind,b:kind MODULE=... STRUCTURE=best-practice|own]
+#   make init-project REPO=... LANG=... UPDATE=1 [DRY=1]   bring a project to this plugin version, keeping its edits
 #   make structure-check REPO=... check a project's layout against its recorded kind
 #   make versions                 print the current stable release of common tools
 #   make token-cost               estimate what the plugin costs in context
+#   make honest-tests             fail if this branch weakened the tests (BASE=<ref>)
+#   make evals                    check that skills still trigger (uses your Claude account, about $3)
 
 PY       := python3
 PLUGIN   := developer-plugin
@@ -29,9 +33,9 @@ REF_ARG   = $(if $(REF),--ref $(REF),) $(if $(DRY),--dry-run,) $(if $(CONFIRM),-
 PROJECTS ?=
 
 .DEFAULT_GOAL := help
-.PHONY: help test check validate sync-rules release releases install-claude uninstall-claude \
+.PHONY: help test check validate sync-rules release release-level releases install-claude uninstall-claude \
 	install-codex uninstall-codex install-antigravity uninstall-antigravity install-copilot \
-	install-all update-clis check-install navigator workspace versions init-project structure-check token-cost
+	install-all update-clis check-install navigator workspace versions init-project structure-check token-cost honest-tests evals
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-22s %s\n", $$1, $$2}'
@@ -49,8 +53,11 @@ check: ## Validate and test (the gate before a commit or release)
 sync-rules: ## Regenerate the skill and rules/AGENTS.md from rules/coding-standards.md
 	@$(PY) scripts/sync_rules.py
 
-release: validate test ## Bump the version: make release LEVEL=patch|minor|major
+release: validate test ## Bump the version: make release LEVEL=patch|minor|major|auto
 	@$(PY) scripts/release.py bump $(LEVEL)
+
+release-level: ## Show the lowest version level the changes since the last tag allow
+	@$(PY) scripts/release.py level
 
 releases: ## List released versions (git tags)
 	@git tag -l 'v*' --sort=-v:refname
@@ -98,7 +105,7 @@ versions: ## Print the current stable release of common tools (live lookup)
 
 init-project: ## Copy standard files into REPO (LANG=python|go|rust|node|c|cpp|java; KIND=library|webapp|... asks once in a terminal)
 	@test -n "$(REPO)" -a -n "$(LANG)" || { echo "usage: make init-project REPO=<folder> LANG=<language> [KIND=<kind> NAME=<name> MEMBERS=a:kind,b:kind MODULE=<go module> STRUCTURE=best-practice|own]"; exit 1; }
-	@$(PY) scripts/init_project.py "$(REPO)" "$(LANG)" $(if $(KIND),--kind "$(KIND)",) $(if $(NAME),--name "$(NAME)",) $(if $(MEMBERS),--members "$(MEMBERS)",) $(if $(MODULE),--module "$(MODULE)",) $(if $(STRUCTURE),--structure "$(STRUCTURE)",)
+	@$(PY) scripts/init_project.py "$(REPO)" "$(LANG)" $(if $(KIND),--kind "$(KIND)",) $(if $(NAME),--name "$(NAME)",) $(if $(MEMBERS),--members "$(MEMBERS)",) $(if $(MODULE),--module "$(MODULE)",) $(if $(STRUCTURE),--structure "$(STRUCTURE)",) $(if $(UPDATE),--update,) $(if $(and $(UPDATE),$(DRY)),--dry-run,)
 
 structure-check: ## Check REPO's layout against its recorded project kind (read-only)
 	@test -n "$(REPO)" || { echo "usage: make structure-check REPO=<folder>"; exit 1; }
@@ -106,3 +113,9 @@ structure-check: ## Check REPO's layout against its recorded project kind (read-
 
 token-cost: ## Estimate what the plugin costs in context (always loaded versus on use)
 	@$(PY) scripts/token_cost.py
+
+honest-tests: ## Fail if this branch weakened the tests (BASE=<ref>, default origin/main)
+	@$(PY) scripts/check_tests_honest.py $(if $(BASE),--base $(BASE),)
+
+evals: ## Check that skills still trigger, with claude plugin eval (opt-in: runs real sessions, about $3)
+	@claude plugin eval . --trust-plugin --runs 3 --threshold 0.66 -j 4 --ablation none --no-publish --max-cost-usd 8

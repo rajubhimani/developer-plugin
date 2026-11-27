@@ -1,7 +1,7 @@
 ---
 name: project-setup
-description: Set up a new or existing project, or a folder of projects, with this plugin's files, git, make targets, docs and task tracking. Use when starting a project, adding the plugin's structure to a repo, or setting up docs for a folder of repos.
-verified: 2026-11-25
+description: "Set up a new or existing project, or a folder of projects, with this plugin's files, git, make targets, docs and task tracking. Use when starting a project, adding the plugin's structure to a repo, or setting up docs for a folder of repos."
+verified: 2026-11-26
 ---
 
 # Project setup
@@ -42,6 +42,27 @@ install git, then run `git init` in the project.
 folder's root, with an index, a per-project folder and notes. It also writes a
 VS Code workspace file and `AGENTS.md`/`CLAUDE.md`. Run `make navigator` to
 refresh the index after repos change. The repos themselves are not changed.
+
+## Bring a project up to date
+
+When the plugin has changed, run `make init-project REPO=<folder> LANG=<language> UPDATE=1`
+(`DRY=1` first to look). It refreshes only files nobody edited, keeps and diffs the ones the
+person edited, creates missing ones, and deletes nothing. It needs a clean git tree: commit or
+stash first, so the update is its own change.
+
+## Permissions
+
+The setup adds `.claude/settings.example.json`: a short allow list (`make check`, `make test`,
+`make lint`, read-only git) and a deny list, so routine commands stop asking. To use it, copy it
+to `.claude/settings.local.json` (untracked) or merge it into `.claude/settings.json`. It leaves
+out any stdin interpreter (`python -`, `bash -c`) and container exec or run, on purpose: an agent
+reads text from strangers (issues, web pages), and those commands turn a planted instruction into
+data leaving the machine. Add a project command only as a fixed command, never a `*` wildcard.
+
+The same file wires a git guard (`scripts/block_dangerous_git.py`) as a hook. It blocks force and
+delete pushes, `reset --hard`, `clean -f`, `branch -D`, `checkout .`, `restore .` and `stash drop`
+before they run, reading the command as a shell would, so `git -C repo push --force` is caught and
+`echo "git push -f"` is not. A plain push or commit is allowed.
 
 ## After setup
 

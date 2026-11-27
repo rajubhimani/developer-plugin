@@ -1,6 +1,6 @@
 ---
 name: project-make
-description: Standard make targets for every project (help, install, format, lint, test, check, build, run, docker-build, clean). Use when adding or changing a Makefile, or asked how to build, test or run a project.
+description: "Standard make targets for every project (help, install, format, lint, test, check, build, run, docker-build, clean). Use when adding or changing a Makefile, or asked how to build, test or run a project."
 verified: 2026-11-07
 ---
 

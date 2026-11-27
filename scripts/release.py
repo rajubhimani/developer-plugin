@@ -3,7 +3,8 @@
 Versions follow semantic versioning (MAJOR.MINOR.PATCH). The manifests share one
 version; the changelog's "## [Unreleased]" section becomes the new release.
 
-    python3 scripts/release.py bump major|minor|patch   update files; you commit and tag
+    python3 scripts/release.py level                   the lowest level the changes since the last tag allow
+    python3 scripts/release.py bump major|minor|patch|auto   update files; you commit and tag
     python3 scripts/release.py verify vX.Y.Z           check manifests and changelog match
     python3 scripts/release.py notes vX.Y.Z            print that release's changelog section
 
@@ -19,8 +20,11 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import surface  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
-MANIFESTS = [ROOT / "plugin.json", ROOT / ".claude-plugin" / "plugin.json"]
+MANIFESTS = [ROOT / "plugin.json", ROOT / ".claude-plugin" / "plugin.json", ROOT / "gemini-extension.json"]
 CHANGELOG = ROOT / "CHANGELOG.md"
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
@@ -68,8 +72,25 @@ def write_manifests(version: str) -> None:
         path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
+def checked_level(level: str) -> str:
+    """Return the level to release at: auto picks the floor; a level below the floor is refused."""
+    found = surface.compare()
+    if found["tag"] is None:
+        if level == "auto":
+            raise SystemExit("no release tag yet, so there is nothing to compare; choose major, minor or patch")
+        return level
+    floor = str(found["floor"])
+    if level == "auto":
+        return floor
+    if surface.LEVELS.index(level) < surface.LEVELS.index(floor):
+        raise SystemExit(f"{level} is below the lowest level the changes since {found['tag']} allow ({floor}): "
+                         + "; ".join(found["reasons"]))  # type: ignore[arg-type]
+    return level
+
+
 def bump_release(level: str, date: str) -> str:
     """Bump the version and close the Unreleased section into a dated release."""
+    level = checked_level(level)
     text = CHANGELOG.read_text(encoding="utf-8")
     if "## [Unreleased]" not in text:
         raise SystemExit("CHANGELOG.md has no '## [Unreleased]' section")
@@ -99,8 +120,9 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
     bump_cmd = commands.add_parser("bump")
-    bump_cmd.add_argument("level", choices=("major", "minor", "patch"))
+    bump_cmd.add_argument("level", choices=("major", "minor", "patch", "auto"))
     bump_cmd.add_argument("--date", default=dt.date.today().isoformat())
+    commands.add_parser("level")
     verify_cmd = commands.add_parser("verify")
     verify_cmd.add_argument("version")
     notes_cmd = commands.add_parser("notes")
@@ -110,6 +132,8 @@ def main(argv: list[str]) -> int:
         new = bump_release(level=args.level, date=args.date)
         print(f"version {new}: manifests and CHANGELOG.md updated.")
         print("Next: review the diff, commit it, then tag:  git tag -a v" + new + " -m 'v" + new + "'")
+    elif args.command == "level":
+        return surface.main([])
     elif args.command == "verify":
         verify(args.version)
     else:

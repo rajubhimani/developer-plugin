@@ -1,11 +1,26 @@
 {
   "name": "developer-plugin",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "description": "One plugin with shared skills for Claude Code, Codex, Antigravity and GitHub Copilot.",
   "author": {
     "name": "Raju Bhimani",
     "url": "https://github.com/rajubhimani"
   },
   "homepage": "https://github.com/rajubhimani/developer-plugin",
-  "repository": "https://github.com/rajubhimani/developer-plugin"
+  "repository": "https://github.com/rajubhimani/developer-plugin",
+  "license": "MIT",
+  "agents": [
+    "./claude-agents/architect.md",
+    "./claude-agents/builder.md",
+    "./claude-agents/code-reviewer.md",
+    "./claude-agents/debugger.md",
+    "./claude-agents/deploy-reviewer.md",
+    "./claude-agents/docs-writer.md",
+    "./claude-agents/planner.md",
+    "./claude-agents/requirements-analyst.md",
+    "./claude-agents/researcher.md",
+    "./claude-agents/security-reviewer.md",
+    "./claude-agents/test-designer.md",
+    "./claude-agents/test-writer.md"
+  ]
 }

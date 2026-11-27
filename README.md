@@ -24,6 +24,9 @@ Or from a terminal: `claude plugin marketplace add rajubhimani/developer-plugin`
 `claude plugin marketplace update developer-plugin`, then
 `claude plugin update developer-plugin`. Pin a released version with a tag.
 
+**Gemini CLI:** `gemini extensions install https://github.com/rajubhimani/developer-plugin` gives it all the
+skills. (The twelve agents are Claude Code's format and are not offered to Gemini.)
+
 **Codex, Antigravity, Copilot, or a checkout you are changing:** clone the repo and run
 `make install-all` (or `python3 scripts/install.py <client>` where `make` is missing,
 for example on Windows). See "Installing and testing" below.
@@ -121,7 +124,8 @@ config flow, and a Kustomize layout.
 
 ## Agents
 
-Claude Code loads twelve subagents from `agents/`. Each is a role, not a
+Claude Code loads twelve subagents from `claude-agents/` (listed in `.claude-plugin/plugin.json`; the folder is
+named for its format so Gemini does not try to load them). Each is a role, not a
 product name, and follows the skills it lists. They are stateless: work moves
 between them as files, and the main session dispatches them, checks every
 report and asks the person at each gate. The `agent-handoff` skill holds the
@@ -202,6 +206,14 @@ without a terminal; the default is `own`). The answer is recorded as `structure`
 Either choice can be switched later by running init with the other value. A new, empty folder
 gets the recommended layout without the question.
 
+**Keeping a project current.** The files the plugin writes are recorded with a hash in
+`.developer-plugin/scaffold.json`. After the plugin is updated, run
+`make init-project REPO=<folder> LANG=<language> UPDATE=1` (add `DRY=1` to only look). Files you
+have not touched are refreshed, ones you edited are kept and shown as a diff, missing ones are
+created, and nothing is deleted (files the plugin no longer writes are listed as orphans). It
+needs a clean git tree so the update is its own reviewable change, and it refuses to move a
+project to an older plugin version without `--confirm-update`.
+
 For Python, `make init-project` also copies a uv multi-stage `Dockerfile`, a Compose
 stack, `.env.example`, `.dockerignore` and `src/app/settings.py`, and `make check`
 runs `make check-env`. That check fails when the Settings fields, `.env.example` and
@@ -220,6 +232,14 @@ Choose the level by what users see, from the commits since the last tag:
 | Breaks existing users (removed or renamed behaviour). Before the first stable release this may ship in a minor release, and the changelog says so | major |
 | New skill, rule, agent, project kind or option; anything users can now do | minor |
 | Fix, wording, trimming or tests only; nothing new for users | patch |
+
+You do not have to judge the level by eye. The public surface (skills, agents, project kinds
+and `make` commands) is compared with the last release tag: `make release-level` prints the
+lowest level the changes allow (something removed is major, or minor before the first stable
+release; something added is minor; otherwise patch), `make release LEVEL=auto` uses it, and a
+lower `LEVEL` is refused. A removal also needs one release of warning: list the element in
+`deprecations.json` with its successor, then remove it later. `make check` fails a removal the
+version does not allow. The comparison starts once the first `vX.Y.Z` tag exists.
 
 Claude Code only delivers an update to people who installed from GitHub when the version
 changes, so every enhancement that should reach them ends with a release. Put each change
@@ -309,3 +329,8 @@ This writes `docs/` and a VS Code `.code-workspace` file into that folder, plus
 `AGENTS.md` and `CLAUDE.md` if they are missing. Existing files you edited are
 kept. Running it inside a Claude Code session on a repo does the same check
 automatically.
+
+## License
+
+[MIT](LICENSE). You may use, copy, modify and share it, including commercially, as long as the
+copyright notice and licence text stay with it.

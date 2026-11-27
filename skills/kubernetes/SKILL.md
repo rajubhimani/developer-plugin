@@ -1,6 +1,6 @@
 ---
 name: kubernetes
-description: Running an app on Kubernetes safely: config and secrets, probes, resources, shutdown, security context, scaling, jobs, Kustomize or Helm, rollback. Use when writing or reviewing manifests, moving from Compose to a cluster, or debugging a pod that restarts or never becomes ready.
+description: "Running an app on Kubernetes safely: config and secrets, probes, resources, shutdown, security context, scaling, jobs, Kustomize or Helm, rollback. Use when writing or reviewing manifests, moving from Compose to a cluster, or debugging a pod that restarts or never becomes ready."
 verified: 2026-11-19
 ---
 

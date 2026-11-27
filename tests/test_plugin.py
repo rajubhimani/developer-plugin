@@ -31,6 +31,11 @@ def run(args: list[str], cwd: Path = ROOT, env: dict[str, str] | None = None) ->
     return subprocess.run(args, cwd=cwd, env=env, capture_output=True, text=True, check=False)
 
 
+def unquote(value: str) -> str:
+    """Return a front matter value without its YAML double quotes."""
+    return str(json.loads(value)) if len(value) >= 2 and value[0] == value[-1] == '"' else value
+
+
 def frontmatter(path: Path) -> dict[str, str]:
     """Return the simple key: value pairs of a SKILL.md front matter block."""
     text = path.read_text(encoding="utf-8")
@@ -40,7 +45,7 @@ def frontmatter(path: Path) -> dict[str, str]:
     fields = {}
     for line in match.group(1).splitlines():
         key, _, value = line.partition(":")
-        fields[key.strip()] = value.strip()
+        fields[key.strip()] = unquote(value.strip())
     return fields
 
 
@@ -813,6 +818,18 @@ class ProjectKindTests(unittest.TestCase):
             self.assertEqual(profile["structure"], "best-practice")
             self.assertTrue((Path(tmp) / "src" / "fresh" / "__init__.py").exists())
 
+    def test_projects_get_a_safe_starter_permissions_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(self.init(Path(tmp), "python", "--kind", "library", "--name", "fresh").returncode, 0)
+            data = json.loads((Path(tmp) / ".claude" / "settings.example.json").read_text())
+            allow = data["permissions"]["allow"]
+            self.assertIn("Bash(make check)", allow)
+            for entry in allow:
+                for risky in ("python -", "python3 -", "bash -c", "sh -c", "docker run", "docker exec", "node -e", "curl", "Bash(*)"):
+                    self.assertNotIn(risky, entry, f"{entry} could run text an attacker planted")
+                self.assertFalse(entry.endswith("(*)"), "no blanket wildcard")
+            self.assertIn("Bash(git push --force *)", data["permissions"]["deny"])
+
     def test_an_unknown_structure_value_is_refused(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             refused = self.init(Path(tmp), "python", "--kind", "library", "--structure", "whatever")
@@ -871,10 +888,10 @@ class MaintainedCodeTests(unittest.TestCase):
         self.assertIn("Is it maintained?", self.read("skills", "dependency-management", "SKILL.md"))
         self.assertIn("Unmaintained and deprecated", self.read("skills", "dependency-management", "SKILL.md"))
         self.assertIn("Deprecations and dependencies", self.read("skills", "code-review-checklist", "SKILL.md"))
-        builder = self.read("agents", "builder.md")
+        builder = self.read("claude-agents", "builder.md")
         self.assertIn("Deprecations replaced", builder)
         self.assertIn("own commit", builder)
-        self.assertIn("deprecat", self.read("agents", "code-reviewer.md").lower())
+        self.assertIn("deprecat", self.read("claude-agents", "code-reviewer.md").lower())
 
     def test_generated_python_projects_fail_on_deprecated_calls(self) -> None:
         for kind in ("library", "cli", "webapp", "monorepo"):
@@ -907,10 +924,177 @@ class MaintainedCodeTests(unittest.TestCase):
         self.assertNotIn("dev-dependencies", python_dev)  # [dependency-groups] replaced it
 
 
+class StrictYamlTests(unittest.TestCase):
+    """Frontmatter must parse under a strict YAML reader, not only under Claude Code's lenient one."""
+
+    def test_every_skill_and_agent_frontmatter_is_valid_yaml(self) -> None:
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML is not installed here")  # honest-ok: optional strict parser
+        files = [*(ROOT / "skills").glob("*/SKILL.md"), *(ROOT / "claude-agents").glob("*.md")]
+        for path in sorted(files):
+            with self.subTest(file=str(path.relative_to(ROOT))):
+                head = re.match(r"^---\n(.*?)\n---\n", path.read_text(encoding="utf-8"), re.S).group(1)
+                data = yaml.safe_load(head)
+                self.assertIsInstance(data["description"], str)
+
+    def test_descriptions_are_quoted(self) -> None:
+        for path in [*(ROOT / "skills").glob("*/SKILL.md"), *(ROOT / "claude-agents").glob("*.md")]:
+            with self.subTest(file=str(path.relative_to(ROOT))):
+                self.assertRegex(path.read_text(encoding="utf-8"), r'(?m)^description: "')
+
+
+class GeminiManifestTests(unittest.TestCase):
+    """The Gemini extension manifest stays in step with the plugin manifests."""
+
+    def test_gemini_does_not_find_the_claude_format_agents(self) -> None:
+        # Gemini loads any agents/ folder in an extension and rejects Claude's format (tools string, skills key).
+        self.assertFalse((ROOT / "agents").exists())
+
+    def test_claude_lists_every_agent_file_explicitly(self) -> None:
+        manifest = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        on_disk = sorted(f"./claude-agents/{p.name}" for p in (ROOT / "claude-agents").glob("*.md"))
+        self.assertEqual(sorted(manifest["agents"]), on_disk)
+
+    def test_it_names_and_versions_the_same_plugin(self) -> None:
+        gemini = json.loads((ROOT / "gemini-extension.json").read_text(encoding="utf-8"))
+        plugin = json.loads((ROOT / "plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual((gemini["name"], gemini["version"]), (plugin["name"], plugin["version"]))
+
+    def test_a_release_bumps_it_too(self) -> None:
+        self.assertIn("gemini-extension.json", (SCRIPTS / "release.py").read_text(encoding="utf-8"))
+
+
+class EvalSuiteTests(unittest.TestCase):
+    """The eval cases are well formed and name skills that exist (free; running them costs money)."""
+
+    CASES = sorted(p for p in (ROOT / "evals").iterdir() if p.is_dir() and (p / "prompt.md").is_file())
+
+    def test_there_are_cases(self) -> None:
+        self.assertGreaterEqual(len(self.CASES), 8)
+
+    def test_each_case_expects_a_real_skill_to_load(self) -> None:
+        for case in self.CASES:
+            with self.subTest(case=case.name):
+                graders = sorted((case / "graders").glob("*.md"))
+                self.assertTrue(graders, "a case needs a grader")
+                text = graders[0].read_text(encoding="utf-8")
+                self.assertIn("type: tool_used", text)
+                self.assertIn("tool: Skill", text)
+                skill = re.search(r"(?m)^input_match: (\S+)$", text).group(1)
+                self.assertTrue((ROOT / "skills" / skill / "SKILL.md").is_file(), f"{skill} is not a skill")
+                self.assertIn("Skill", (case / "prompt.md").read_text(encoding="utf-8").split("\n---\n")[0])
+
+    def test_run_output_is_not_committed(self) -> None:
+        self.assertIn("evals/results/", (ROOT / ".gitignore").read_text(encoding="utf-8"))
+
+
+class GitGuardTests(unittest.TestCase):
+    """The git guard blocks commands that destroy work and lets everything else through."""
+
+    BLOCKED = ["git push --force", "git push -f origin x", "git push --force-with-lease", "git push origin +main",
+               "git push origin :old", "git push --delete origin x", "git -C repo push --force",
+               "make test && git reset --hard HEAD~1", "git reset --hard", "git clean -fd", "git branch -D old",
+               "git checkout .", "git checkout -f main", "git restore .", "git stash drop", "git stash clear",
+               "/usr/bin/git reset --hard", "sudo git push -f", "FOO=1 git push -f", "cd x; git push --force",
+               "git push -f 'unbalanced"]
+    ALLOWED = ["git push", "git push origin feature", "git push -u origin feature", "git reset --soft HEAD~1",
+               "git clean -n", "git clean -fdn", "git branch -d old", "git branch --show-current", "git checkout main",
+               "git checkout -b new", "git restore --staged .", "git restore file.txt", "git stash", "git stash pop",
+               "git status", "git commit --amend -m x", 'echo "git push -f"', "grep -r 'git clean -f' docs",
+               "git log --oneline | head", "git push 'unbalanced"]
+
+    def guard(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("guard", SCRIPTS / "block_dangerous_git.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_dangerous_commands_are_blocked(self) -> None:
+        guard = self.guard()
+        for command in self.BLOCKED:
+            with self.subTest(command=command):
+                self.assertIsNotNone(guard.check(command))
+
+    def test_ordinary_commands_pass(self) -> None:
+        guard = self.guard()
+        for command in self.ALLOWED:
+            with self.subTest(command=command):
+                self.assertIsNone(guard.check(command))
+
+    def test_the_hook_protocol_uses_exit_code_two(self) -> None:
+        def call(command: str) -> subprocess.CompletedProcess:
+            return subprocess.run([sys.executable, str(SCRIPTS / "block_dangerous_git.py")], capture_output=True, text=True,
+                                  input=json.dumps({"tool_name": "Bash", "tool_input": {"command": command}}), check=False)
+        blocked, fine = call("git push --force"), call("git push")
+        self.assertEqual((blocked.returncode, fine.returncode), (2, 0))
+        self.assertIn("BLOCKED", blocked.stderr)
+        for odd in ("", "not json", "{}"):
+            done = subprocess.run([sys.executable, str(SCRIPTS / "block_dangerous_git.py")], capture_output=True, text=True,
+                                  input=odd, check=False)
+            self.assertEqual(done.returncode, 0, f"bad input must not block: {odd!r}")
+
+    def test_new_projects_get_the_guard_and_the_hook_that_runs_it(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(run([sys.executable, str(SCRIPTS / "init_project.py"), tmp, "python", "--kind", "library",
+                                  "--name", "fresh"]).returncode, 0)
+            self.assertTrue((Path(tmp) / "scripts" / "block_dangerous_git.py").is_file())
+            data = json.loads((Path(tmp) / ".claude" / "settings.example.json").read_text())
+            hook = data["hooks"]["PreToolUse"][0]
+            self.assertEqual(hook["matcher"], "Bash")
+            self.assertIn("block_dangerous_git.py", hook["hooks"][0]["command"])
+
+
+class ManualSkillTests(unittest.TestCase):
+    """A skill only the person starts must stay out of the model's context."""
+
+    def test_handoff_is_manual_only(self) -> None:
+        text = (ROOT / "skills" / "handoff" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertRegex(text.split("\n---\n")[0], r"(?m)^disable-model-invocation: true$")
+
+    def test_no_skill_is_close_to_the_compaction_cut(self) -> None:
+        for path in (ROOT / "skills").glob("*/SKILL.md"):
+            with self.subTest(skill=path.parent.name):
+                self.assertLess(len(path.read_bytes()), 16000, "leave room before the 20,000 character cut")
+
+
+class LeanAgentTests(unittest.TestCase):
+    """Agents start small and load other skills on demand."""
+
+    def test_every_agent_can_load_the_skills_it_does_not_preload(self) -> None:
+        for path in sorted((ROOT / "claude-agents").glob("*.md")):
+            with self.subTest(agent=path.stem):
+                text = path.read_text(encoding="utf-8")
+                self.assertIn("## Load on demand", text)
+                self.assertRegex(text.split("\n---\n")[0], r"(?m)^tools:.*\bSkill\b")
+
+    def test_no_agent_preloads_more_than_the_budget(self) -> None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("validate", SCRIPTS / "validate.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        for path in sorted((ROOT / "claude-agents").glob("*.md")):
+            preload, _ = module.agent_skills(path)
+            weight = sum(len((ROOT / "skills" / n / "SKILL.md").read_text(encoding="utf-8")) // 4 for n in preload)
+            self.assertLessEqual(weight, module.MAX_PRELOAD_TOKENS, path.stem)
+
+    def test_validation_rejects_a_preload_over_the_budget(self) -> None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("validate", SCRIPTS / "validate.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as tmp:
+            agent = Path(tmp) / "x.md"
+            agent.write_text("---\nname: x\nskills:\n  - kubernetes\n  - lang-python\n---\n## Load on demand\n\n- `docker`: when needed.\n")
+            self.assertEqual(module.agent_skills(agent), (["kubernetes", "lang-python"], ["docker"]))
+
+
 class AgentTests(unittest.TestCase):
     """Agents are valid, use only skills that exist, and reviewers cannot edit."""
 
-    AGENTS = sorted((ROOT / "agents").glob("*.md"))
+    AGENTS = sorted((ROOT / "claude-agents").glob("*.md"))
     READ_ONLY = ("code-reviewer", "security-reviewer", "deploy-reviewer", "debugger")
     ROLES = {"researcher", "requirements-analyst", "architect", "test-designer", "planner",
              "test-writer", "builder", "docs-writer", "code-reviewer", "security-reviewer",
@@ -950,7 +1134,7 @@ class AgentTests(unittest.TestCase):
 
     def test_reviewers_and_the_debugger_are_read_only(self) -> None:
         for name in self.READ_ONLY:
-            tools = {t.strip() for t in self.fields(ROOT / "agents" / f"{name}.md")["tools"].split(",")}
+            tools = {t.strip() for t in self.fields(ROOT / "claude-agents" / f"{name}.md")["tools"].split(",")}
             with self.subTest(agent=name):
                 self.assertFalse(tools & {"Edit", "Write"}, "reviewers and the debugger cannot edit")
 
@@ -959,7 +1143,10 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(names, self.ROLES)
         for path in self.AGENTS:
             with self.subTest(agent=path.stem):
-                self.assertIn("agent-handoff", self.fields(path).get("skills", []))
+                # Preloaded or loadable on demand: either way the agent can reach the report shape.
+                text = path.read_text(encoding="utf-8")
+                self.assertTrue("agent-handoff" in self.fields(path).get("skills", [])
+                                or "- `agent-handoff`:" in text, "the agent must be able to reach agent-handoff")
 
 
 class TemplateTests(unittest.TestCase):
@@ -1687,13 +1874,327 @@ class InstallManifestTests(unittest.TestCase):
         self.assertEqual(legacy.returncode, 2)
 
 
+class ScaffoldUpdateTests(unittest.TestCase):
+    """--update brings a project to this plugin version without touching anything the owner edited."""
+
+    def made(self, *flags: str) -> Path:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        done = run([sys.executable, str(SCRIPTS / "init_project.py"), str(root), "python", *flags])
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return root
+
+    def commit(self, root: Path) -> None:
+        for args in (["add", "-A"], ["commit", "-q", "-m", "state"]):
+            done = run(["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@example.com", *args])
+            self.assertEqual(done.returncode, 0, done.stderr)
+
+    def update(self, root: Path, *flags: str) -> subprocess.CompletedProcess:
+        return run([sys.executable, str(SCRIPTS / "init_project.py"), str(root), "python", "--update", *flags])
+
+    def record(self, root: Path) -> dict:
+        return json.loads((root / ".developer-plugin" / "scaffold.json").read_text(encoding="utf-8"))
+
+    def test_init_records_a_hash_for_each_file_it_wrote(self) -> None:
+        root = self.made("--kind", "library", "--name", "demo")
+        files = self.record(root)["files"]
+        for name in ("Makefile", ".editorconfig", "scripts/tasks.py", "tests/alignment/test_alignment.py"):
+            self.assertIn(name, files)
+        self.assertEqual(self.record(root)["version"], json.loads((ROOT / "plugin.json").read_text())["version"])
+
+    def test_an_untouched_project_is_unchanged_by_an_update(self) -> None:
+        root = self.made("--kind", "library", "--name", "demo")
+        self.commit(root)
+        result = self.update(root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("0 to create, 0 to refresh", result.stdout)
+        self.assertEqual(run(["git", "-C", str(root), "status", "--porcelain"]).stdout.strip(), "")
+
+    def test_update_never_overwrites_an_edit_and_never_deletes(self) -> None:
+        root = self.made("--kind", "library", "--name", "demo")
+        (root / ".editorconfig").write_text((root / ".editorconfig").read_text() + "# mine\n", encoding="utf-8")
+        (root / "CHANGELOG.md").unlink()
+        old = "an older plugin wrote this\n"
+        (root / ".gitmessage").write_text(old, encoding="utf-8")
+        import hashlib
+        record = self.record(root)
+        record["files"][".gitmessage"] = hashlib.sha256(old.encode()).hexdigest()
+        record["files"]["scripts/retired.py"] = "x"
+        (root / "scripts" / "retired.py").write_text("retired\n", encoding="utf-8")
+        (root / ".developer-plugin" / "scaffold.json").write_text(json.dumps(record), encoding="utf-8")
+        self.commit(root)
+        result = self.update(root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("# mine", (root / ".editorconfig").read_text(), "an edit is never overwritten")
+        self.assertIn("kept    .editorconfig (you edited it", result.stdout)
+        self.assertIn("-# mine", result.stdout, "the diff is shown")
+        self.assertTrue((root / "CHANGELOG.md").is_file(), "a missing file is created")
+        self.assertNotEqual((root / ".gitmessage").read_text(), old, "an untouched older file is refreshed")
+        self.assertTrue((root / "scripts" / "retired.py").is_file(), "nothing is deleted")
+        self.assertIn("orphan  scripts/retired.py", result.stdout)
+        self.commit(root)
+        again = self.update(root)
+        self.assertIn("0 to create, 0 to refresh", again.stdout, "a second update has nothing left to do")
+
+    def test_a_dry_run_writes_nothing_and_a_dirty_tree_is_refused(self) -> None:
+        root = self.made("--kind", "library", "--name", "demo")
+        (root / "CHANGELOG.md").unlink()
+        refused = self.update(root)
+        self.assertEqual(refused.returncode, 1)
+        self.assertIn("uncommitted changes", refused.stderr)
+        looked = self.update(root, "--dry-run")
+        self.assertEqual(looked.returncode, 0)
+        self.assertIn("create  CHANGELOG.md", looked.stdout)
+        self.assertFalse((root / "CHANGELOG.md").exists())
+
+    def test_update_needs_a_project_the_plugin_set_up(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.update(Path(tmp))
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("--update is for a project the plugin already set up", result.stderr)
+
+    def test_moving_a_project_backwards_needs_confirmation(self) -> None:
+        root = self.made("--kind", "library", "--name", "demo")
+        record = self.record(root)
+        record["version"] = "99.0.0"
+        (root / ".developer-plugin" / "scaffold.json").write_text(json.dumps(record), encoding="utf-8")
+        self.commit(root)
+        refused = self.update(root)
+        self.assertEqual(refused.returncode, 1)
+        self.assertIn("backwards", refused.stderr)
+        self.assertEqual(self.update(root, "--confirm-update").returncode, 0)
+
+    def test_an_owners_own_structure_note_is_never_touched_or_recorded(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        (root / "pyproject.toml").write_text('[project]\nname="m"\nversion="0.1"\n', encoding="utf-8")
+        (root / "m").mkdir()
+        (root / "m" / "__init__.py").write_text("", encoding="utf-8")
+        self.assertEqual(run([sys.executable, str(SCRIPTS / "init_project.py"), str(root), "python", "--kind", "library",
+                              "--name", "m", "--no-input"]).returncode, 0)
+        note = root / "docs" / "project-structure.md"
+        note.write_text(note.read_text() + "\n- our team rule\n", encoding="utf-8")
+        self.assertNotIn("docs/project-structure.md", self.record(root)["files"])
+        self.commit(root)
+        result = self.update(root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("- our team rule", note.read_text())
+        self.assertFalse((root / "src").exists(), "an update never creates a layout the owner declined")
+
+    def test_a_dry_run_without_update_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run([sys.executable, str(SCRIPTS / "init_project.py"), tmp, "python", "--dry-run"])
+            self.assertEqual(result.returncode, 1)
+
+
+class TestHonestyTests(unittest.TestCase):
+    """The check sees what a machine can: skips added, assertions removed, test files deleted."""
+
+    BASE = "def test_a():\n    assert 1 == 1\n    assert 2 == 2\n"
+
+    def repo(self) -> Path:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        (root / "tests").mkdir()
+        (root / "tests" / "test_a.py").write_text(self.BASE, encoding="utf-8")
+        (root / "src.py").write_text("x = 1\n", encoding="utf-8")
+        self.git(root, "init", "-q")
+        self.git(root, "add", "-A")
+        self.git(root, "commit", "-q", "-m", "base")
+        return root
+
+    def git(self, root: Path, *args: str) -> None:
+        done = run(["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@example.com", *args])
+        self.assertEqual(done.returncode, 0, done.stderr)
+
+    def verdict(self, root: Path) -> subprocess.CompletedProcess:
+        self.git(root, "add", "-A")
+        self.git(root, "commit", "-q", "-m", "change")
+        return run([sys.executable, str(SCRIPTS / "check_tests_honest.py"), "--base", "HEAD~1"], cwd=root)
+
+    def test_a_clean_change_passes(self) -> None:
+        root = self.repo()
+        (root / "tests" / "test_a.py").write_text(self.BASE + "def test_b():\n    assert 3 == 3\n", encoding="utf-8")
+        (root / "src.py").write_text("x = 2  # skip this\n", encoding="utf-8")
+        self.assertEqual(self.verdict(root).returncode, 0)
+
+    def test_an_added_skip_marker_fails(self) -> None:
+        for marker in ("@pytest.mark.skip\n", "@pytest.mark.xfail\n", "@unittest.skip('later')\n"):
+            root = self.repo()
+            (root / "tests" / "test_a.py").write_text(marker + self.BASE, encoding="utf-8")
+            result = self.verdict(root)
+            self.assertEqual(result.returncode, 1, marker)
+            self.assertIn("adds a skip or focus marker", result.stdout)
+
+    def test_other_languages_markers_fail(self) -> None:
+        for name, text in (("a.test.ts", "it.only('x', () => {})\n"), ("a_test.go", "t.Skip(\"no\")\n"),
+                           ("tests/a.rs", "#[ignore]\n"), ("tests/ATest.java", "@Disabled\n")):
+            root = self.repo()
+            target = root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text, encoding="utf-8")
+            self.assertEqual(self.verdict(root).returncode, 1, name)
+
+    def test_a_removed_assertion_fails_and_a_replaced_one_does_not(self) -> None:
+        root = self.repo()
+        (root / "tests" / "test_a.py").write_text("def test_a():\n    assert 1 == 1\n", encoding="utf-8")
+        result = self.verdict(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("1 assertion(s) removed", result.stdout)
+        root = self.repo()
+        (root / "tests" / "test_a.py").write_text("def test_a():\n    assert 1 == 1\n    assert 3 == 3\n", encoding="utf-8")
+        self.assertEqual(self.verdict(root).returncode, 0)
+
+    def test_a_deleted_test_file_fails(self) -> None:
+        root = self.repo()
+        (root / "tests" / "test_a.py").unlink()
+        result = self.verdict(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("test file deleted", result.stdout)
+
+    def test_a_deliberate_skip_with_a_reason_is_allowed(self) -> None:
+        root = self.repo()
+        (root / "tests" / "test_a.py").write_text("# honest-ok: needs docker\n@pytest.mark.skip  # honest-ok: needs docker\n" + self.BASE, encoding="utf-8")
+        self.assertEqual(self.verdict(root).returncode, 0)
+        root = self.repo()
+        (root / "tests" / "test_a.py").write_text("@pytest.mark.skip  # honest-ok:\n" + self.BASE, encoding="utf-8")
+        self.assertEqual(self.verdict(root).returncode, 1, "a reason is required")
+
+    def test_new_projects_get_the_check_and_a_make_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            made = run([sys.executable, str(SCRIPTS / "init_project.py"), tmp, "python", "--kind", "library", "--name", "fresh"])
+            self.assertEqual(made.returncode, 0, made.stderr)
+            self.assertTrue((Path(tmp) / "scripts" / "check_tests_honest.py").is_file())
+            self.assertIn("honest-tests:", (Path(tmp) / "Makefile").read_text(encoding="utf-8"))
+
+
+class SurfaceTests(unittest.TestCase):
+    """The public surface decides the lowest version level, and removals need a warning first."""
+
+    def repo(self, version: str = "0.1.0") -> Path:
+        """Make a small tagged git repository holding a skill, an agent, a kind and a command."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        (root / "scripts").mkdir()
+        for name in ("release.py", "surface.py"):
+            shutil.copy(SCRIPTS / name, root / "scripts" / name)
+        (root / "skills" / "alpha").mkdir(parents=True)
+        (root / "skills" / "alpha" / "SKILL.md").write_text("---\nname: alpha\n---\n", encoding="utf-8")
+        (root / "claude-agents").mkdir()
+        (root / "claude-agents" / "worker.md").write_text("---\nname: worker\n---\n", encoding="utf-8")
+        (root / "templates" / "kinds" / "python" / "library").mkdir(parents=True)
+        (root / "templates" / "kinds" / "python" / "library" / "kind.json").write_text("{}", encoding="utf-8")
+        (root / "Makefile").write_text("check: ## Gate\n\ttrue\n", encoding="utf-8")
+        (root / "plugin.json").write_text(json.dumps({"name": "p", "version": version}), encoding="utf-8")
+        (root / "gemini-extension.json").write_text(json.dumps({"name": "p", "version": version}), encoding="utf-8")
+        (root / ".claude-plugin").mkdir()
+        (root / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": "p", "version": version}), encoding="utf-8")
+        (root / "CHANGELOG.md").write_text("# Changelog\n\n## [Unreleased]\n\n- Something.\n", encoding="utf-8")
+        for args in (["init", "-q"], ["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q", "-m", "x"],
+                     ["tag", f"v{version}"]):
+            self.assertEqual(run(["git", "-C", str(root), *args]).returncode, 0)
+        return root
+
+    def surface(self, root: Path) -> subprocess.CompletedProcess:
+        return run([sys.executable, str(root / "scripts" / "surface.py")], cwd=root)
+
+    def level(self, root: Path) -> str:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("surface_under_test", root / "scripts" / "surface.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return str(module.compare(root)["floor"])
+
+    def test_nothing_new_allows_a_patch(self) -> None:
+        root = self.repo()
+        self.assertEqual(self.level(root), "patch")
+
+    def test_adding_a_skill_an_agent_a_kind_or_a_command_needs_a_minor(self) -> None:
+        for make in (lambda r: (r / "skills" / "beta").mkdir() or (r / "skills" / "beta" / "SKILL.md").write_text("x"),
+                     lambda r: (r / "claude-agents" / "other.md").write_text("x"),
+                     lambda r: (r / "templates" / "kinds" / "go").mkdir() or (r / "templates" / "kinds" / "go" / "cli").mkdir()
+                     or (r / "templates" / "kinds" / "go" / "cli" / "kind.json").write_text("{}"),
+                     lambda r: (r / "Makefile").write_text("check: ## Gate\n\ttrue\nship: ## Ship\n\ttrue\n")):
+            root = self.repo()
+            make(root)
+            self.assertEqual(self.level(root), "minor")
+
+    def test_a_release_below_the_floor_is_refused_and_auto_picks_the_floor(self) -> None:
+        root = self.repo()
+        (root / "skills" / "beta").mkdir()
+        (root / "skills" / "beta" / "SKILL.md").write_text("x")
+        refused = run([sys.executable, str(root / "scripts" / "release.py"), "bump", "patch"], cwd=root)
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertIn("below the lowest level", refused.stderr)
+        self.assertEqual(json.loads((root / "plugin.json").read_text())["version"], "0.1.0", "nothing was written")
+        done = run([sys.executable, str(root / "scripts" / "release.py"), "bump", "auto", "--date", "2026-11-26"], cwd=root)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(json.loads((root / "plugin.json").read_text())["version"], "0.2.0")
+
+    def test_a_removal_fails_the_check_until_the_version_allows_it(self) -> None:
+        root = self.repo()
+        shutil.rmtree(root / "skills" / "alpha")
+        self.assertEqual(self.level(root), "minor", "before 1.0 a minor release may break things")
+        failed = run([sys.executable, str(root / "scripts" / "surface.py"), "--check"], cwd=root)
+        self.assertEqual(failed.returncode, 1)
+        self.assertIn("skill alpha removed since v0.1.0", failed.stdout)
+        for name in ("plugin.json", ".claude-plugin/plugin.json", "gemini-extension.json"):
+            (root / name).write_text(json.dumps({"name": "p", "version": "0.2.0"}))
+        self.assertEqual(run([sys.executable, str(root / "scripts" / "surface.py"), "--check"], cwd=root).returncode, 0)
+
+    def test_after_1_0_a_removal_needs_a_major(self) -> None:
+        root = self.repo(version="1.0.0")
+        (root / "claude-agents" / "worker.md").unlink()
+        self.assertEqual(self.level(root), "major")
+        for name in ("plugin.json", ".claude-plugin/plugin.json", "gemini-extension.json"):
+            (root / name).write_text(json.dumps({"name": "p", "version": "1.1.0"}))
+        self.assertEqual(run([sys.executable, str(root / "scripts" / "surface.py"), "--check"], cwd=root).returncode, 1)
+        for name in ("plugin.json", ".claude-plugin/plugin.json", "gemini-extension.json"):
+            (root / name).write_text(json.dumps({"name": "p", "version": "2.0.0"}))
+        self.assertEqual(run([sys.executable, str(root / "scripts" / "surface.py"), "--check"], cwd=root).returncode, 0)
+
+    def test_moving_agents_to_claude_agents_is_not_a_removal(self) -> None:
+        root = self.repo()
+        run(["git", "-C", str(root), "tag", "-d", "v0.1.0"])
+        (root / "agents").mkdir()
+        shutil.move(str(root / "claude-agents" / "worker.md"), str(root / "agents" / "worker.md"))
+        (root / "claude-agents").rmdir()
+        for args in (["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-q", "-m", "old layout"],
+                     ["tag", "v0.1.0"]):
+            self.assertEqual(run(["git", "-C", str(root), *args]).returncode, 0)
+        (root / "claude-agents").mkdir()
+        shutil.move(str(root / "agents" / "worker.md"), str(root / "claude-agents" / "worker.md"))
+        (root / "agents").rmdir()
+        self.assertEqual(self.level(root), "patch", "the same agent in a new folder is not removed")
+        self.assertEqual(run([sys.executable, str(root / "scripts" / "surface.py"), "--check"], cwd=root).returncode, 0)
+
+    def test_with_no_release_tag_there_is_nothing_to_compare(self) -> None:
+        root = self.repo()
+        run(["git", "-C", str(root), "tag", "-d", "v0.1.0"])
+        result = self.surface(root)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("no release tag yet", result.stdout)
+        auto = run([sys.executable, str(root / "scripts" / "release.py"), "bump", "auto"], cwd=root)
+        self.assertNotEqual(auto.returncode, 0)
+        self.assertIn("no release tag yet", auto.stderr)
+
+    def test_the_real_plugin_passes_its_own_surface_check(self) -> None:
+        self.assertEqual(run([sys.executable, str(SCRIPTS / "surface.py"), "--check"]).returncode, 0)
+
+
 class VersioningTests(unittest.TestCase):
     """Versions, changelog sections, pinned CI actions and version-specific installs."""
 
     def fake_project(self, root: Path, changelog: str) -> None:
         (root / "scripts").mkdir()
         shutil.copy(SCRIPTS / "release.py", root / "scripts" / "release.py")
+        shutil.copy(SCRIPTS / "surface.py", root / "scripts" / "surface.py")
         (root / "plugin.json").write_text(json.dumps({"name": "developer-plugin", "version": "0.1.0"}), encoding="utf-8")
+        (root / "gemini-extension.json").write_text(json.dumps({"name": "developer-plugin", "version": "0.1.0"}), encoding="utf-8")
         (root / ".claude-plugin").mkdir()
         (root / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": "developer-plugin", "version": "0.1.0"}), encoding="utf-8")
         (root / "CHANGELOG.md").write_text(changelog, encoding="utf-8")

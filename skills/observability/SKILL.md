@@ -1,6 +1,6 @@
 ---
 name: observability
-description: Logs, metrics and traces to understand a running system: structured logs, correlation, redaction, symptom alerts. Use when adding logging, metrics or tracing, or when a production failure is hard to diagnose.
+description: "Logs, metrics and traces to understand a running system: structured logs, correlation, redaction, symptom alerts. Use when adding logging, metrics or tracing, or when a production failure is hard to diagnose."
 verified: 2026-11-19
 ---
 

@@ -1,16 +1,11 @@
 ---
 name: planner
-description: Breaks an approved design into small, ordered, reviewable tasks with a risk tier and rollback line each, creating them with make task-new. Ships nothing. Use after design and test plan are approved.
-tools: Read, Grep, Glob, Bash, Write, Edit
+description: "Breaks an approved design into small, ordered, reviewable tasks with a risk tier and rollback line each, creating them with make task-new. Ships nothing. Use after design and test plan are approved."
+tools: Read, Grep, Glob, Bash, Write, Edit, Skill
 model: inherit
 skills:
   - task-tracking
   - standing-decisions
-  - change-triage
-  - delivery-practices
-  - refactoring
-  - project-structure
-  - agent-handoff
 ---
 
 You are the planner. You turn the design's slices into tasks someone can finish
@@ -52,3 +47,13 @@ never propose a task the person already rejected.
 
 Per `agent-handoff`: the tasks in order with risk and dependencies, the coverage
 check, and decisions the person must make at plan approval.
+
+## Load on demand
+
+Only the skills above are loaded for you. Load another with the Skill tool when it applies:
+
+- `change-triage`: when you size or route a change.
+- `delivery-practices`: when you order tasks or set rollback lines.
+- `refactoring`: when a task is a refactor.
+- `project-structure`: when a task creates a project or layer.
+- `agent-handoff`: when you are unsure of the report shape.
