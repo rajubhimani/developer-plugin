@@ -1,6 +1,6 @@
 ---
 name: docs-and-index
-description: Documentation for code: a page per module and an index README per folder. Use when adding, moving or removing code or docs, or when asked to document a project.
+description: "Documentation for code: a page per module and an index README per folder. Use when adding, moving or removing code or docs, or when asked to document a project."
 verified: 2026-11-07
 ---
 

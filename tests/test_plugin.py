@@ -31,6 +31,11 @@ def run(args: list[str], cwd: Path = ROOT, env: dict[str, str] | None = None) ->
     return subprocess.run(args, cwd=cwd, env=env, capture_output=True, text=True, check=False)
 
 
+def unquote(value: str) -> str:
+    """Return a front matter value without its YAML double quotes."""
+    return str(json.loads(value)) if len(value) >= 2 and value[0] == value[-1] == '"' else value
+
+
 def frontmatter(path: Path) -> dict[str, str]:
     """Return the simple key: value pairs of a SKILL.md front matter block."""
     text = path.read_text(encoding="utf-8")
@@ -40,7 +45,7 @@ def frontmatter(path: Path) -> dict[str, str]:
     fields = {}
     for line in match.group(1).splitlines():
         key, _, value = line.partition(":")
-        fields[key.strip()] = value.strip()
+        fields[key.strip()] = unquote(value.strip())
     return fields
 
 
@@ -917,6 +922,27 @@ class MaintainedCodeTests(unittest.TestCase):
         self.assertNotIn("spring-boot-starter-web\"", service)  # deprecated in favour of webmvc
         python_dev = self.read("templates", "kinds", "python", "webapp", "files", "pyproject.toml.tmpl")
         self.assertNotIn("dev-dependencies", python_dev)  # [dependency-groups] replaced it
+
+
+class StrictYamlTests(unittest.TestCase):
+    """Frontmatter must parse under a strict YAML reader, not only under Claude Code's lenient one."""
+
+    def test_every_skill_and_agent_frontmatter_is_valid_yaml(self) -> None:
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML is not installed here")  # honest-ok: optional strict parser
+        files = [*(ROOT / "skills").glob("*/SKILL.md"), *(ROOT / "claude-agents").glob("*.md")]
+        for path in sorted(files):
+            with self.subTest(file=str(path.relative_to(ROOT))):
+                head = re.match(r"^---\n(.*?)\n---\n", path.read_text(encoding="utf-8"), re.S).group(1)
+                data = yaml.safe_load(head)
+                self.assertIsInstance(data["description"], str)
+
+    def test_descriptions_are_quoted(self) -> None:
+        for path in [*(ROOT / "skills").glob("*/SKILL.md"), *(ROOT / "claude-agents").glob("*.md")]:
+            with self.subTest(file=str(path.relative_to(ROOT))):
+                self.assertRegex(path.read_text(encoding="utf-8"), r'(?m)^description: "')
 
 
 class GeminiManifestTests(unittest.TestCase):

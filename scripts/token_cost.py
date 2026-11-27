@@ -8,11 +8,22 @@ does not count agents listed in the manifest (they live in claude-agents/), so i
 is lower than this one by the agent descriptions.
 """
 
+import json
 import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def unquote(value: str) -> str:
+    """Return a front matter value without its YAML double quotes."""
+    if len(value) >= 2 and value[0] == value[-1] == '"':
+        try:
+            return str(json.loads(value))
+        except ValueError:
+            return value[1:-1]
+    return value
 
 
 def fields(path: Path) -> tuple[dict[str, str], str]:
@@ -22,7 +33,7 @@ def fields(path: Path) -> tuple[dict[str, str], str]:
     pairs = {}
     for line in (match.group(1).splitlines() if match else []):
         key, _, value = line.partition(":")
-        pairs[key.strip()] = value.strip()
+        pairs[key.strip()] = unquote(value.strip())
     return pairs, text
 
 

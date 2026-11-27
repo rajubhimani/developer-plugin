@@ -4,6 +4,13 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+- Frontmatter is now valid YAML for every reader. 31 of the 66 skill and agent files had a `description` with an
+  unquoted colon (many from the earlier description trimming), which Claude Code and Gemini's skill loader accept
+  but a strict YAML parser rejects. Every description is now a quoted string, the generator for the
+  `coding-standards` skill writes it that way, and `make check` fails an unquoted one (and, where PyYAML is
+  installed, parses every frontmatter strictly). After the change, 3 of 8 eval cases were re-run and passed
+  9 of 9 (`git-workflow` 2 of 2 before a usage limit stopped the run); re-run `make evals` to cover the rest.
+
 - Gemini CLI support. `gemini-extension.json` (versioned with the other manifests, which `make check` and
   `make release` keep in step) lets Gemini install the plugin from GitHub with `gemini extensions install`.
   Checked with Gemini itself: it validates, and all the skills load. Gemini also loads any `agents/` folder

@@ -1,6 +1,6 @@
 ---
 name: security-reviewer
-description: Read-only security review of a diff or design on the project's real stack. Use when a change touches authentication, authorization, user data, secrets, external input, dependencies or deployment, or for a security check.
+description: "Read-only security review of a diff or design on the project's real stack. Use when a change touches authentication, authorization, user data, secrets, external input, dependencies or deployment, or for a security check."
 tools: Read, Grep, Glob, Bash, Skill
 model: inherit
 skills:

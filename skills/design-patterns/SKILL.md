@@ -1,6 +1,6 @@
 ---
 name: design-patterns
-description: Design patterns and principles (composition, small interfaces, dependency inversion), and when not to use them. Use when designing a module, adding an abstraction, or reviewing over-engineered or tangled code.
+description: "Design patterns and principles (composition, small interfaces, dependency inversion), and when not to use them. Use when designing a module, adding an abstraction, or reviewing over-engineered or tangled code."
 verified: 2026-11-19
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: refactoring
-description: Change structure without changing behaviour: characterization tests, small reversible steps, seams, strangler replacements, debt. Use when cleaning up code, paying down debt, replacing a module, or when a change is hard because code is tangled.
+description: "Change structure without changing behaviour: characterization tests, small reversible steps, seams, strangler replacements, debt. Use when cleaning up code, paying down debt, replacing a module, or when a change is hard because code is tangled."
 verified: 2026-11-19
 ---
 

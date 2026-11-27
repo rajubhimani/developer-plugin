@@ -1,6 +1,6 @@
 ---
 name: requirements-analyst
-description: Turns an approved idea into testable requirements (REQ-NNN with Given/When/Then) and a feature file, asking the open questions. Never designs. Use before design, when a request is vague, or when a change alters behaviour.
+description: "Turns an approved idea into testable requirements (REQ-NNN with Given/When/Then) and a feature file, asking the open questions. Never designs. Use before design, when a request is vague, or when a change alters behaviour."
 tools: Read, Grep, Glob, Bash, Write, Edit, Skill
 model: inherit
 skills:

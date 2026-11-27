@@ -16,3 +16,6 @@ keeps failing is a real regression.
 Descriptions were not rewritten to say only "Use when ...", as another plugin recommends: our
 skills were loaded in 40 of 41 runs, so the change would add regression risk for little gain.
 Re-run before and after any change to a description.
+
+Each run uses your own Claude allowance (the whole suite is 24 sessions). If you hit your usage limit
+the remaining cases report `exit 1` and a limit message: that is not a failing skill, so re-run later.

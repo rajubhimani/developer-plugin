@@ -1,6 +1,6 @@
 ---
 name: change-triage
-description: Pick the lightest safe path for a change (hotfix, docs or config edit, small change, feature) with two questions and one confirmation. Use when starting any change, before a task or code.
+description: "Pick the lightest safe path for a change (hotfix, docs or config edit, small change, feature) with two questions and one confirmation. Use when starting any change, before a task or code."
 verified: 2026-11-17
 ---
 

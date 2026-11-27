@@ -1,6 +1,6 @@
 ---
 name: researcher
-description: Investigates whether and how to build something, then writes one dated research note that opens with a recommendation (go, validate first, defer or no-go). Use at the start of an idea, before requirements, or when comparing options.
+description: "Investigates whether and how to build something, then writes one dated research note that opens with a recommendation (go, validate first, defer or no-go). Use at the start of an idea, before requirements, or when comparing options."
 tools: Read, Grep, Glob, Bash, Write, WebFetch, WebSearch, Skill
 model: inherit
 skills:

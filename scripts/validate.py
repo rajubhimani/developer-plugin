@@ -20,6 +20,16 @@ MAX_PRELOAD_TOKENS = 3000  # skills an agent starts with, at about four characte
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 
+def unquote(value: str) -> str:
+    """Return a front matter value without its YAML double quotes."""
+    if len(value) >= 2 and value[0] == value[-1] == '"':
+        try:
+            return str(json.loads(value))
+        except ValueError:
+            return value[1:-1]
+    return value
+
+
 def load(path: Path) -> dict:
     """Parse a JSON manifest, failing with the file name on error."""
     try:
@@ -37,7 +47,7 @@ def frontmatter(path: Path) -> dict:
     fields = {}
     for line in match.group(1).splitlines():
         key, _, value = line.partition(":")
-        fields[key.strip()] = value.strip()
+        fields[key.strip()] = unquote(value.strip())
     return fields
 
 
@@ -92,6 +102,8 @@ def main() -> int:
             problems.append(f"{folder}: name '{fields.get('name')}' must match folder")
         if not NAME_RE.match(folder):
             problems.append(f"{folder}: name must be kebab-case")
+        if not re.search(r'(?m)^description: "', skill.read_text(encoding="utf-8")):
+            problems.append(f"{folder}: quote the description (a colon in plain text is invalid YAML to a strict parser)")
         if not fields.get("description"):
             problems.append(f"{folder}: description missing")
         elif len(fields["description"]) > MAX_DESCRIPTION:
@@ -119,6 +131,8 @@ def main() -> int:
             problems.append(f"claude-agents/{agent.stem}: name '{fields.get('name')}' must match file")
         if not NAME_RE.match(agent.stem):
             problems.append(f"claude-agents/{agent.stem}: name must be kebab-case")
+        if not re.search(r'(?m)^description: "', agent.read_text(encoding="utf-8")):
+            problems.append(f"claude-agents/{agent.stem}: quote the description (a colon in plain text is invalid YAML to a strict parser)")
         if not fields.get("description"):
             problems.append(f"claude-agents/{agent.stem}: description missing")
         elif len(fields["description"]) > MAX_DESCRIPTION:

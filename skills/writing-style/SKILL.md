@@ -1,6 +1,6 @@
 ---
 name: writing-style
-description: Plain-language rules for docs, READMEs, reports, pull request descriptions, commit messages and agent instructions. Use when writing or editing any prose a person or a model will read.
+description: "Plain-language rules for docs, READMEs, reports, pull request descriptions, commit messages and agent instructions. Use when writing or editing any prose a person or a model will read."
 verified: 2026-11-17
 ---
 

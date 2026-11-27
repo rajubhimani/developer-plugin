@@ -1,6 +1,6 @@
 ---
 name: lang-c
-description: C project setup and quality gates (current C standard, strict warnings, sanitizers, clang-tidy, CMake). Use when creating, changing, reviewing or building C code.
+description: "C project setup and quality gates (current C standard, strict warnings, sanitizers, clang-tidy, CMake). Use when creating, changing, reviewing or building C code."
 verified: 2026-11-07
 ---
 

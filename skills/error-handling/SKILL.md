@@ -1,6 +1,6 @@
 ---
 name: error-handling
-description: Detect, classify, propagate, report and test errors without hiding them or leaking internals. Use when writing code that can fail, adding try or catch or error returns, designing error messages, or reviewing swallowed errors.
+description: "Detect, classify, propagate, report and test errors without hiding them or leaking internals. Use when writing code that can fail, adding try or catch or error returns, designing error messages, or reviewing swallowed errors."
 verified: 2026-11-19
 ---
 

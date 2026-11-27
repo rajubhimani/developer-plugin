@@ -1,6 +1,6 @@
 ---
 name: shell-hygiene
-description: Rules for running commands so no process is left behind (foreground by default, time limits, accounting for background processes). Use when running builds, tests, dev servers, scanners or any long command.
+description: "Rules for running commands so no process is left behind (foreground by default, time limits, accounting for background processes). Use when running builds, tests, dev servers, scanners or any long command."
 verified: 2026-11-17
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: ci-cd
-description: CI and CD practice: build once, gated pipelines, least-privilege tokens, pinned actions, OIDC, SBOM, promotion, rollback. Use when creating or changing pipelines, release automation or deployment configuration.
+description: "CI and CD practice: build once, gated pipelines, least-privilege tokens, pinned actions, OIDC, SBOM, promotion, rollback. Use when creating or changing pipelines, release automation or deployment configuration."
 verified: 2026-11-07
 ---
 

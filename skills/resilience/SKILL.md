@@ -1,6 +1,6 @@
 ---
 name: resilience
-description: Make calls to services and dependencies safe to fail: timeouts, bounded retries with backoff, idempotency, circuit breakers, degradation. Use when code calls a network service, queue or database, or when reviewing reliability.
+description: "Make calls to services and dependencies safe to fail: timeouts, bounded retries with backoff, idempotency, circuit breakers, degradation. Use when code calls a network service, queue or database, or when reviewing reliability."
 verified: 2026-11-19
 ---
 

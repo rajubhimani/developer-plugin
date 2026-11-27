@@ -1,6 +1,6 @@
 ---
 name: code-comments
-description: Comments and docstrings: explain why, keep them true, mark debt with an owner and condition. Use when writing or reviewing code, or when a comment looks wrong or stale.
+description: "Comments and docstrings: explain why, keep them true, mark debt with an owner and condition. Use when writing or reviewing code, or when a comment looks wrong or stale."
 verified: 2026-11-07
 ---
 

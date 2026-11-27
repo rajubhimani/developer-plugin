@@ -1,6 +1,6 @@
 ---
 name: lang-typescript-react
-description: React and TypeScript setup and quality gates (Vite, strict tsconfig, ESLint, Vitest, Testing Library, Playwright). Use when creating, changing, reviewing or testing React or TypeScript code.
+description: "React and TypeScript setup and quality gates (Vite, strict tsconfig, ESLint, Vitest, Testing Library, Playwright). Use when creating, changing, reviewing or testing React or TypeScript code."
 verified: 2026-11-07
 ---
 
