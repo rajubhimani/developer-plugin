@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "developer-plugin",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "One plugin with shared skills for Claude Code, Codex, Antigravity and GitHub Copilot.",
   "keywords": [
     "developer",

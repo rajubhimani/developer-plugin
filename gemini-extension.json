@@ -1,5 +1,5 @@
 {
   "name": "developer-plugin",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Developer skills for Gemini CLI: coding standards, project setup, review, Docker, Kubernetes and more."
 }

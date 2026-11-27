@@ -4,6 +4,8 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-27
+
 - The `debug-failure` and `secrets-and-config` descriptions now name the cases where their skill was skipped: a
   question about how to find the cause of a failure, and where a password, API key or token should live. Both
   evals missed on some runs before; afterwards the full suite passed 40 of 40 (eight cases, five runs each).
