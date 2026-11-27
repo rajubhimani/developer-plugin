@@ -1,6 +1,6 @@
 ---
 name: debug-failure
-description: "Investigate a failure of unknown cause: severity, reproduce, isolate, state the cause with evidence, revert or fix forward. Use when something breaks after a change, a test or build fails unexpectedly, or users report a fault."
+description: "Investigate a failure of unknown cause: severity, reproduce, isolate, state the cause with evidence, revert or fix forward. Use when something breaks after a change, a test or build fails unexpectedly, users report a fault, or you are asked how to find the cause of one."
 verified: 2026-11-17
 ---
 
