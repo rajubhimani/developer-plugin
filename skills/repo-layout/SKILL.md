@@ -1,7 +1,8 @@
 ---
 name: repo-layout
-description: "Monorepo or multi-repo layout: changed-only builds, shared libraries, versioning. Use when setting up repo structure, splitting or merging repos, or deciding how shared code is built and released."
-verified: 2026-11-07
+description: "Monorepo or multi-repo: changed-only builds, shared libraries, versioning. Use when splitting, merging or setting up repos."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Repo layout: monorepo or polyrepo

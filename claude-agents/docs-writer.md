@@ -3,6 +3,7 @@ name: docs-writer
 description: "Writes and updates docs and folder indexes (module pages, READMEs, guides, decision records, changelog entries). Edits docs only. Use for planned docs tasks, documentation audits and stale-doc fixes."
 tools: Read, Grep, Glob, Bash, Write, Edit, Skill
 model: inherit
+maxTurns: 60
 skills:
   - writing-style
   - docs-and-index

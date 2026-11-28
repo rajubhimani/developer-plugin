@@ -1,7 +1,8 @@
 ---
 name: concurrency
-description: "Correct concurrent and async code: shared state, locks, cancellation, deadlines, structured concurrency, race tests. Use when adding threads, async tasks, background jobs, caches or locks, or debugging flaky or hung behaviour."
-verified: 2026-11-19
+description: "Races, lost updates, locks, cancellation, async tasks. Use when concurrent requests or threads share data, or behaviour is flaky or hangs."
+metadata:
+  verified: "2026-11-19"
 ---
 
 # Concurrency

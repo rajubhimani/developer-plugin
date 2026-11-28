@@ -1,7 +1,8 @@
 ---
 name: project-structure
-description: "Choose and apply the folder layout that fits the project (library, web app or service, CLI, monorepo), asking once, and check an existing project's structure. Use when starting a project, restructuring, or asked whether a project follows best practice."
-verified: 2026-11-25
+description: "Choose or check a folder layout for a library, app, CLI or monorepo. Use when starting, restructuring or auditing a project."
+metadata:
+  verified: "2026-11-25"
 ---
 
 # Project structure

@@ -1,7 +1,8 @@
 ---
 name: compose
-description: "Docker Compose for local development and multi-service setups: healthchecks, dependency order, volumes, profiles, watch, env files. Use when writing or changing compose.yaml or running several containers together."
-verified: 2026-11-07
+description: "Docker Compose: healthchecks, dependency order, volumes, profiles, env files. Use for compose.yaml or running several containers together."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Docker Compose

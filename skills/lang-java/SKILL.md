@@ -1,7 +1,8 @@
 ---
 name: lang-java
-description: "Java project setup and quality gates (current LTS JDK, Gradle with a version catalog or Maven, JUnit 5, static analysis). Use when creating, changing, reviewing or building Java code."
-verified: 2026-11-07
+description: "Java setup and gates: LTS JDK, Gradle or Maven, JUnit, static analysis. Use when writing, reviewing or building Java."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Java

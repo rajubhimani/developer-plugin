@@ -1,7 +1,8 @@
 ---
 name: lang-python
-description: "Python project setup and quality gates (uv, src layout, ruff, pyright, pytest, lock files). Use when creating, changing, reviewing or running Python code or a Python package."
-verified: 2026-11-07
+description: "Python setup and gates: uv, src layout, ruff, pyright, pytest. Use when writing, reviewing or running Python or starting a package."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Python

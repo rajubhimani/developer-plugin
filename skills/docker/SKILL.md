@@ -1,7 +1,8 @@
 ---
 name: docker
-description: "Container images: multi-stage Dockerfiles, digest-pinned bases, non-root users, secret-safe builds, healthchecks, scanning. Use when writing or reviewing a Dockerfile or building images."
-verified: 2026-11-07
+description: "Dockerfiles: multi-stage, pinned bases, non-root, safe secrets, scanning. Use when writing or reviewing a Dockerfile or building images."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Docker images

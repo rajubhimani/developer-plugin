@@ -1,7 +1,8 @@
 ---
 name: feature-workflow
-description: "The path for building a feature in a project set up with this plugin: requirement, feature file, tasks, tests, completion. Use when asked to start, plan, build or finish a feature."
-verified: 2026-11-07
+description: "Requirement to completion in a project set up with this plugin. Use when asked to start, plan, build or finish a feature."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Feature workflow

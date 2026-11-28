@@ -14,10 +14,20 @@ Revisit if the always-on cost grows well past today's, or users ask for a smalle
 
 ## Descriptions keep a short summary, not only "Use when ..."
 
-One plugin recommends descriptions that state only when to use a skill, so an agent cannot follow
-a summary instead of reading the skill. Ours do summarise, and in the eval runs the right skill
-loaded 40 times in 41 (see `evals/README.md`), so rewriting them would add risk for no observed
-gain. Re-run `make evals` before and after any description change.
+One plugin recommends descriptions that state only when to use a skill. Ours keep a few topic words
+and then the trigger, in the words people use, and the eval suite passes with them (see
+`evals/README.md`). Re-run `make evals` before and after any description change.
+
+## No `paths` field to hide language skills
+
+A probe skill limited to Go files stayed in the skill list, with its description, in an empty folder.
+It saves nothing on the list, so shorter descriptions are how we save space.
+
+## Agents keep `model: inherit` and no `effort`
+
+A pinned model would override the choice of someone who runs a cheaper or stronger one, and we have
+no measurement showing a lower effort keeps agent quality. Each agent does have `maxTurns`, a
+generous cap against runaway runs; a capped agent returns its work marked partial.
 
 ## No Codex agents
 

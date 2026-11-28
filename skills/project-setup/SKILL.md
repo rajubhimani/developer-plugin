@@ -1,7 +1,8 @@
 ---
 name: project-setup
-description: "Set up a new or existing project, or a folder of projects, with this plugin's files, git, make targets, docs and task tracking. Use when starting a project, adding the plugin's structure to a repo, or setting up docs for a folder of repos."
-verified: 2026-11-26
+description: "Add this plugin's files, make targets, docs and task tracking. Use when setting up a new or existing project or a folder of repos."
+metadata:
+  verified: "2026-11-26"
 ---
 
 # Project setup

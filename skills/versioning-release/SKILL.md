@@ -1,7 +1,8 @@
 ---
 name: versioning-release
-description: "Semantic versioning, Keep a Changelog, tags, release notes, deprecation before removal. Use when picking a version, updating the changelog, cutting a release, tagging, or planning a breaking change."
-verified: 2026-11-07
+description: "Semantic versioning, changelog, tags, deprecation. Use when picking a version, releasing or planning a breaking change."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Versioning and releases

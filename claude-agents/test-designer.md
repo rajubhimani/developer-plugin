@@ -3,6 +3,7 @@ name: test-designer
 description: "Writes acceptance intent per requirement and the risk-weighted test count, turns design gaps into questions, writes no test code. Use after the design draft and before planning or test writing."
 tools: Read, Grep, Glob, Bash, Write, Edit, Skill
 model: inherit
+maxTurns: 50
 skills:
   - testing-strategy
   - untrusted-input

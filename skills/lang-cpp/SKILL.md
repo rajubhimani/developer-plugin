@@ -1,7 +1,8 @@
 ---
 name: lang-cpp
-description: "C++ project setup and quality gates (CMake presets, current C++ standard, clang-format, clang-tidy, sanitizers, vcpkg or Conan). Use when creating, changing, reviewing or building C++ code."
-verified: 2026-11-07
+description: "C++ setup and gates: CMake presets, clang-tidy, sanitizers, vcpkg or Conan. Use when writing, reviewing or building C++."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # C++

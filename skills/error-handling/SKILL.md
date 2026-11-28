@@ -1,7 +1,8 @@
 ---
 name: error-handling
-description: "Detect, classify, propagate, report and test errors without hiding them or leaking internals. Use when writing code that can fail, adding try or catch or error returns, designing error messages, or reviewing swallowed errors."
-verified: 2026-11-19
+description: "Classify, propagate, report and test errors. Use when code can fail, exceptions are caught or swallowed, or error messages are designed."
+metadata:
+  verified: "2026-11-19"
 ---
 
 # Error handling

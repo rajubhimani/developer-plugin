@@ -1,7 +1,8 @@
 ---
 name: code-comments
-description: "Comments and docstrings: explain why, keep them true, mark debt with an owner and condition. Use when writing or reviewing code, or when a comment looks wrong or stale."
-verified: 2026-11-07
+description: "Comments and docstrings that explain why and stay true. Use when writing or reviewing code comments."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Code comments

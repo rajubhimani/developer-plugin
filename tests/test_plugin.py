@@ -990,6 +990,36 @@ class EvalSuiteTests(unittest.TestCase):
         self.assertIn("evals/results/", (ROOT / ".gitignore").read_text(encoding="utf-8"))
 
 
+class ListingBudgetTests(unittest.TestCase):
+    """Skill descriptions stay small and portable, and agents cannot run without a limit."""
+
+    def test_listed_descriptions_fit_the_budget(self) -> None:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import validate
+
+        self.assertLessEqual(validate.listing_chars(ROOT), validate.MAX_LISTING_CHARS)
+
+    def test_verified_date_sits_under_metadata(self) -> None:
+        for folder in SKILL_FOLDERS:
+            with self.subTest(skill=folder):
+                head = (ROOT / "skills" / folder / "SKILL.md").read_text(encoding="utf-8").split("\n---\n")[0]
+                self.assertRegex(head, r'(?m)^metadata:\n  verified: "\d{4}-\d{2}-\d{2}"$')
+                self.assertNotRegex(head, r"(?m)^verified:")
+
+    def test_every_agent_has_a_turn_limit(self) -> None:
+        for agent in sorted((ROOT / "claude-agents").glob("*.md")):
+            with self.subTest(agent=agent.stem):
+                self.assertRegex(agent.read_text(encoding="utf-8").split("\n---\n")[0], r"(?m)^maxTurns: [1-9]\d*$")
+
+    def test_quality_cases_have_graders_and_results_are_ignored(self) -> None:
+        cases = [p for p in (ROOT / "quality").iterdir() if (p / "prompt.md").is_file()]
+        self.assertGreaterEqual(len(cases), 6)
+        for case in cases:
+            with self.subTest(case=case.name):
+                self.assertEqual(len(list((case / "graders").glob("*.md"))), 4)
+        self.assertIn("quality/results/", (ROOT / ".gitignore").read_text(encoding="utf-8"))
+
+
 class GitGuardTests(unittest.TestCase):
     """The git guard blocks commands that destroy work and lets everything else through."""
 

@@ -28,3 +28,4 @@ __pycache__/
 
 # Eval run output
 evals/results/
+quality/results/

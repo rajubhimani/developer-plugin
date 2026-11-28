@@ -1,8 +1,9 @@
 ---
 name: test-writer
-description: "Writes failing tests first from a requirement or a bug report, confirms they fail for the right reason, and stops. Edits tests only, never production code. Use before implementing a behaviour change or a bug fix."
+description: "Writes failing tests first from a requirement or bug report, then stops. Edits tests only. Use before a behaviour change or bug fix."
 tools: Read, Grep, Glob, Edit, Write, Bash, Skill
 model: inherit
+maxTurns: 80
 skills:
   - testing-strategy
   - untrusted-input

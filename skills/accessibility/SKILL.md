@@ -1,7 +1,8 @@
 ---
 name: accessibility
-description: "Accessible interfaces: semantic HTML, keyboard and focus, text alternatives, contrast, labelled forms, WCAG AA testing. Use when building or reviewing a web or app interface."
-verified: 2026-11-19
+description: "Accessible UI: semantic HTML, keyboard, focus, contrast, labels, WCAG. Use when building or fixing a page or form, or screen reader users report problems."
+metadata:
+  verified: "2026-11-19"
 ---
 
 # Accessibility

@@ -1,7 +1,8 @@
 ---
 name: testing-strategy
-description: "How many tests and where, test-first order, honest tests, small reliable suites. Use when planning tests for a change, writing a failing test first, or reviewing whether tests guard behaviour."
-verified: 2026-11-26
+description: "Which tests and how many, test-first, honest tests. Use when planning or writing tests, or checking they guard behaviour."
+metadata:
+  verified: "2026-11-26"
 ---
 
 # Testing strategy

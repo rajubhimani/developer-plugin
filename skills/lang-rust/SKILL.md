@@ -1,7 +1,8 @@
 ---
 name: lang-rust
-description: "Rust project setup and quality gates (rustup toolchain, cargo workspaces, clippy, rustfmt, cargo-deny, cargo-audit). Use when creating, changing, reviewing or building Rust crates."
-verified: 2026-11-07
+description: "Rust setup and gates: cargo workspaces, clippy, rustfmt, cargo-deny. Use when writing, reviewing or building Rust."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Rust

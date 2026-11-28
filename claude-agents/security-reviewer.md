@@ -1,8 +1,9 @@
 ---
 name: security-reviewer
-description: "Read-only security review of a diff or design on the project's real stack. Use when a change touches authentication, authorization, user data, secrets, external input, dependencies or deployment, or for a security check."
+description: "Read-only security review of a diff or design. Use for auth, user data, secrets, external input, dependencies, deployment or a security check."
 tools: Read, Grep, Glob, Bash, Skill
 model: inherit
+maxTurns: 50
 skills:
   - security-review
   - untrusted-input

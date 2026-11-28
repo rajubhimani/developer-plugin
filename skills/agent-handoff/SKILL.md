@@ -1,7 +1,8 @@
 ---
 name: agent-handoff
-description: "How the main session briefs the plugin's agents and checks their reports. Use when dispatching any of the plugin's agents (researcher, architect, planner, builder, reviewers, debugger and so on) or reading an agent's report."
-verified: 2026-11-17
+description: "Brief the plugin's agents and verify their reports. Use when dispatching researcher, builder, reviewer or other agents, or reading their output."
+metadata:
+  verified: "2026-11-17"
 ---
 
 # Agent handoff

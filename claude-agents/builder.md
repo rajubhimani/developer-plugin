@@ -1,8 +1,9 @@
 ---
 name: builder
-description: "Implements one task after its red tests exist: makes them pass, refactors while green, updates docs, runs the checks, commits only when asked. Never edits a red test. Use to build a single planned task."
+description: "Implements one planned task: makes its red tests pass, refactors, updates docs, runs checks. Never edits a red test. Use to build a single task."
 tools: Read, Grep, Glob, Bash, Write, Edit, Skill
 model: inherit
+maxTurns: 120
 skills:
   - coding-standards
   - shell-hygiene

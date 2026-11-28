@@ -1,7 +1,8 @@
 ---
 name: git-workflow
-description: "Git practice: branches, commits, messages, pull requests, merges, history safety, what never to commit. Use when branching, committing, writing a message, opening or reviewing a PR, merging, or before any history-changing command."
-verified: 2026-11-07
+description: "Branches, commits, pull requests, merges, history safety. Use when branching, committing, merging or before rewriting history."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Git workflow
