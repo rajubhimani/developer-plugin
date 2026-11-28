@@ -1,7 +1,8 @@
 ---
 name: performance
-description: "Fix performance by measuring first: budget, profiling, biggest cost, careful caching, regression guards. Use when something is slow, before optimizing, when adding a hot path or cache, or reviewing a performance claim."
-verified: 2026-11-19
+description: "Measure first, fix the biggest cost, guard it. Use when something is slow, before optimizing, or adding a cache or hot path."
+metadata:
+  verified: "2026-11-19"
 ---
 
 # Performance

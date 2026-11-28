@@ -3,6 +3,7 @@ name: planner
 description: "Breaks an approved design into small, ordered, reviewable tasks with a risk tier and rollback line each, creating them with make task-new. Ships nothing. Use after design and test plan are approved."
 tools: Read, Grep, Glob, Bash, Write, Edit, Skill
 model: inherit
+maxTurns: 50
 skills:
   - task-tracking
   - standing-decisions

@@ -1,8 +1,9 @@
 ---
 name: handoff
-description: "Write a handoff note so a fresh session can continue this work. Use only when the person types /handoff or asks to end this session and carry on in a new one."
+description: "Write a handoff note so a fresh session can continue. Use only on /handoff or when asked to carry on in a new session."
 disable-model-invocation: true
-verified: 2026-11-27
+metadata:
+  verified: "2026-11-27"
 ---
 
 # Handoff

@@ -1,7 +1,8 @@
 ---
 name: ai-assisted-development
-description: "Working with AI coding assistants: scoped tasks, plan first, short context, token-efficient prompts, review every diff as suspect. Use when delegating code to an assistant, reviewing generated changes, or writing instructions for one."
-verified: 2026-11-25
+description: "Working with AI coding assistants: scoped tasks, short context, token-efficient prompts. Use when delegating code or reviewing generated changes."
+metadata:
+  verified: "2026-11-25"
 ---
 
 # Working with AI coding assistants

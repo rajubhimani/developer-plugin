@@ -1,7 +1,8 @@
 ---
 name: project-navigator
-description: "Find projects in a projects folder through small docs under docs/ instead of rescanning. Use when asked about several projects, where something lives, how projects connect, or what command runs a project."
-verified: 2026-11-07
+description: "Find projects through small docs instead of rescanning. Use for questions across several projects: where things live and how they connect."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Project navigator

@@ -1,7 +1,8 @@
 ---
 name: repo-api-and-ui
-description: "Work across an API repo and a UI repo: contract-first OpenAPI, generated clients, versioning, contract tests, browser end-to-end tests. Use when changing an API a front end uses, or setting up their repos and tests."
-verified: 2026-11-07
+description: "Contract-first work across API and UI repos: OpenAPI, generated clients, e2e tests. Use when changing an API a front end uses."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # API repo and UI repo

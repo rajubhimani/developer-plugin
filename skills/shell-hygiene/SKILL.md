@@ -1,7 +1,8 @@
 ---
 name: shell-hygiene
-description: "Rules for running commands so no process is left behind (foreground by default, time limits, accounting for background processes). Use when running builds, tests, dev servers, scanners or any long command."
-verified: 2026-11-17
+description: "Leave no process behind: time limits and background tracking. Use when running builds, tests, dev servers or long commands."
+metadata:
+  verified: "2026-11-17"
 ---
 
 # Shell hygiene

@@ -4,6 +4,19 @@ All notable changes. Versions follow semantic versioning; see `scripts/release.p
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-28
+
+- Shorter skill and agent descriptions. Claude Code gives all installed skills one list with a size limit and
+  cuts descriptions when it is full. Ours now take about 8,600 characters instead of 12,900, and always-loaded
+  text fell from about 3,670 to 2,400 tokens. `make check` caps a description at 200 characters and the list at
+  9,000. Triggering passed 48 of 48 runs across 16 cases, eight of them new; `accessibility` and `concurrency`
+  had loaded in none of three runs before.
+- `verified` moved under `metadata` in every skill, and `make check` rejects other non-portable frontmatter.
+  `disable-model-invocation` stays on the manual-only `handoff` skill although it is Claude-only.
+- Every agent has a `maxTurns` cap.
+- `make quality-evals` compares answers with and without the plugin (see `quality/README.md` for how far to
+  trust it).
+
 ## [0.3.1] - 2026-11-27
 
 - The `debug-failure` and `secrets-and-config` descriptions now name the cases where their skill was skipped: a

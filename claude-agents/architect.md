@@ -1,8 +1,9 @@
 ---
 name: architect
-description: "Designs a feature from approved requirements: components, contracts, data, failure modes, risk per requirement, slices to build. Never edits a requirement. Use after requirements are approved and before planning."
+description: "Designs a feature from approved requirements: components, contracts, data, failures, risk and slices. Use after requirements are approved, before planning."
 tools: Read, Grep, Glob, Bash, Write, Edit, Skill
 model: inherit
+maxTurns: 60
 skills:
   - architecture-decisions
   - untrusted-input

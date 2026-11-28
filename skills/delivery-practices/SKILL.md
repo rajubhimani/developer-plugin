@@ -1,7 +1,8 @@
 ---
 name: delivery-practices
-description: "Ship in small, safe steps: short-lived branches, flags, progressive rollout, fast rollback, the four delivery measures. Use when planning a release, sizing a pull request, or reviewing delivery health."
-verified: 2026-11-19
+description: "Small safe releases: flags, progressive rollout, rollback, delivery measures. Use when planning a release or sizing a pull request."
+metadata:
+  verified: "2026-11-19"
 ---
 
 # Delivery practices

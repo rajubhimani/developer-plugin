@@ -58,7 +58,7 @@ is not generated yet; its file format is unverified.
 ## Skills
 
 Each skill loads only when its description matches the task, so the agent reads
-just what it needs. Every skill records when it was checked (`verified:`), and
+just what it needs. Every skill records when it was checked (`metadata.verified`), and
 `make validate` fails when a date is more than 90 days old.
 
 | Skill | Use it for |

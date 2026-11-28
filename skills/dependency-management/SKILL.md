@@ -1,7 +1,8 @@
 ---
 name: dependency-management
-description: "Choosing, pinning, updating and auditing dependencies and the supply chain: lockfiles, scanning, provenance, maintained libraries, licenses. Use when adding or upgrading a package, reviewing a lockfile change, or answering an advisory."
-verified: 2026-11-19
+description: "Pin, update and audit dependencies: lockfiles, scanning, licences. Use when adding or upgrading a package or answering a security advisory."
+metadata:
+  verified: "2026-11-19"
 ---
 
 # Dependency management

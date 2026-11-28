@@ -1,7 +1,8 @@
 ---
 name: domain-modeling
-description: "Layering and domain modelling (ports and adapters, DDD) only where the domain is complex, with a test for when plain CRUD is right. Use when structuring business logic, choosing layers, or reviewing an over-layered or anemic design."
-verified: 2026-11-19
+description: "Layers, ports and adapters, DDD, only where the domain is complex. Use when structuring business logic or reviewing over-layered code."
+metadata:
+  verified: "2026-11-19"
 ---
 
 # Domain modelling and layers

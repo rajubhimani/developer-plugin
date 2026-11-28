@@ -1,7 +1,8 @@
 ---
 name: task-tracking
-description: "Create, move, list and read feature tasks with the make task targets. Use when asked what is in progress, completed, rejected or in backlog, or to create or change a task's status."
-verified: 2026-11-07
+description: "Create, move and list tasks with make targets. Use when asked what is in progress, done, rejected or in backlog."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Task tracking

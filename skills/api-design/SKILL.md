@@ -1,7 +1,8 @@
 ---
 name: api-design
-description: "HTTP and library API design: naming, status codes, problem-details errors, pagination, idempotency, versioning. Use when adding or changing an endpoint, a response shape, or a public function."
-verified: 2026-11-19
+description: "API design: naming, status codes, error format, pagination, idempotency, versioning. Use when adding or changing an endpoint or public function."
+metadata:
+  verified: "2026-11-19"
 ---
 
 # API design

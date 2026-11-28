@@ -1,8 +1,9 @@
 ---
 name: debugger
-description: "Diagnoses a failure of unknown cause: reproduces, isolates the layer, states the cause with evidence, writes Observed, Expected and Must-stay-unchanged lines. Read-only. Use when a test, build or feature fails unexpectedly, or after a regression."
+description: "Read-only diagnosis of a failure of unknown cause, with evidence. Use when a test, build or feature fails unexpectedly or after a regression."
 tools: Read, Grep, Glob, Bash, Skill
 model: inherit
+maxTurns: 60
 skills:
   - debug-failure
   - untrusted-input

@@ -1,7 +1,8 @@
 ---
 name: project-alignment
-description: "Keep requirements, tests, docs and hygiene aligned with the align check and requirement IDs. Use when adding or changing requirements or tests, when make align or make check fails, or asked whether the project meets its requirements."
-verified: 2026-11-07
+description: "Keep requirements, tests and docs aligned by requirement IDs. Use when changing requirements, or make align or make check fails."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Project alignment

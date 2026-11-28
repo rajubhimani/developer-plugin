@@ -1,7 +1,8 @@
 ---
 name: coding-standards
-description: "Coding standards for every change: latest stable versions, structure, style, tests, docs and index pages, and git rules. Use whenever writing, changing or reviewing code or docs."
-verified: 2026-11-07
+description: "Standards for every change: versions, structure, style, tests, docs, git. Use whenever writing, changing or reviewing code."
+metadata:
+  verified: "2026-11-07"
 ---
 
 These rules apply to every task that writes or changes code.

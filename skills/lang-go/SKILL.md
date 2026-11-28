@@ -1,7 +1,8 @@
 ---
 name: lang-go
-description: "Go project setup and quality gates (go modules, cmd and internal layout, gofmt, go vet, golangci-lint v2, race detector, govulncheck). Use when creating, changing, reviewing or testing Go code."
-verified: 2026-11-07
+description: "Go setup and gates: modules, layout, vet, golangci-lint, race detector, govulncheck. Use when writing, reviewing or testing Go."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Go

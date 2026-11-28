@@ -1,7 +1,8 @@
 ---
 name: refresh-practices
-description: "Keep this plugin's guidance current: stable principles apart from tool details, review steps, changelog. Use when asked to update or re-research the plugin's practices, or when a skill's verified date is old."
-verified: 2026-11-07
+description: "Keep this plugin's guidance current. Use when asked to update its practices, or a skill's verified date is old."
+metadata:
+  verified: "2026-11-07"
 ---
 
 # Refreshing practices
@@ -26,11 +27,11 @@ section, at the time you need them.
 ## Review steps
 
 1. Run `make versions` to see the current stable releases.
-2. For each skill whose `verified:` date is old, read the official docs it names
+2. For each skill whose `metadata.verified` date is old, read the official docs it names
    and check that the commands and syntax still work.
 3. Replace anything that no longer holds. If a new practice has replaced an old
    one, add it and remove the old one; do not leave both.
-4. Set `verified:` to today's date only after step 2 for that skill.
+4. Set `metadata.verified` to today's date only after step 2 for that skill.
 5. Add one line to `CHANGELOG.md`: the date, the skills changed, and why.
 6. Run `make validate`. It fails on hard-coded version numbers and on stale dates.
 

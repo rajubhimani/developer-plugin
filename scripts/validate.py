@@ -13,7 +13,10 @@ ROOT = Path(__file__).resolve().parent.parent
 PLUGIN_MANIFESTS = [ROOT / "plugin.json", ROOT / ".claude-plugin" / "plugin.json"]  # carry author, licence and links
 MANIFESTS = [*PLUGIN_MANIFESTS, ROOT / "gemini-extension.json"]  # all must agree on name and version
 MAX_AGE_DAYS = 90
-MAX_DESCRIPTION = 300  # characters; descriptions load into every session
+MAX_DESCRIPTION = 200  # characters; descriptions load into every session
+MAX_LISTING_CHARS = 9000  # all listed skills together; Claude Code cuts descriptions when the shared list is full
+PORTABLE_FIELDS = {"name", "description", "license", "compatibility", "metadata", "allowed-tools",
+                   "disable-model-invocation"}  # the last one is Claude-only and needed by manual skills
 MAX_BODY_LINES = 500  # a skill body past this should move detail into references/
 MAX_SKILL_BYTES = 20000  # Claude Code cuts a re-attached skill at 20,000 characters after compaction
 MAX_PRELOAD_TOKENS = 3000  # skills an agent starts with, at about four characters a token
@@ -49,6 +52,16 @@ def frontmatter(path: Path) -> dict:
         key, _, value = line.partition(":")
         fields[key.strip()] = unquote(value.strip())
     return fields
+
+
+def listing_chars(root: Path) -> int:
+    """Return the characters our skills add to the session's skill list (manual-only skills are not listed)."""
+    total = 0
+    for skill in (root / "skills").glob("*/SKILL.md"):
+        fields = frontmatter(skill)
+        if fields.get("disable-model-invocation") != "true":
+            total += len(f"developer-plugin:{skill.parent.name}: {fields.get('description', '')}\n") + 2
+    return total
 
 
 def agent_skills(path: Path) -> tuple[list[str], list[str]]:
@@ -116,14 +129,22 @@ def main() -> int:
         lines = len(skill.read_text(encoding="utf-8").splitlines())
         if lines > MAX_BODY_LINES:
             problems.append(f"{folder}: SKILL.md is {lines} lines; keep it under {MAX_BODY_LINES} and move detail to references/")
+        top = re.findall(r"(?m)^([A-Za-z_-]+):", skill.read_text(encoding="utf-8").split("\n---\n")[0])
+        if extra := sorted(set(top) - PORTABLE_FIELDS):
+            problems.append(f"{folder}: frontmatter field(s) {extra} are not portable; put them under metadata")
         checked = fields.get("verified", "")
         try:
             age = (dt.date.today() - dt.date.fromisoformat(checked)).days
         except ValueError:
-            problems.append(f"{folder}: 'verified' date missing or not YYYY-MM-DD")
+            problems.append(f"{folder}: metadata 'verified' date missing or not YYYY-MM-DD")
         else:
             if age > MAX_AGE_DAYS:
                 problems.append(f"{folder}: last verified {age} days ago; re-check against current docs")
+
+    listing = listing_chars(ROOT)
+    if listing > MAX_LISTING_CHARS:
+        problems.append(f"skill list: names and descriptions take {listing} characters (limit {MAX_LISTING_CHARS}); "
+                        "shorten descriptions")
 
     for agent in sorted((ROOT / "claude-agents").glob("*.md")):
         fields = frontmatter(agent)
@@ -173,7 +194,7 @@ def main() -> int:
                 problems.append(f"{doc.relative_to(ROOT)}:{number}: hard-coded version or standard; say 'current' and look it up")
     for skill in sorted((ROOT / "skills").glob("*/SKILL.md")):
         full = skill.read_text(encoding="utf-8")
-        body = "\n".join(line for line in full.splitlines() if not line.startswith("verified:"))
+        body = "\n".join(line for line in full.splitlines() if not line.lstrip().startswith("verified:"))
         for number, line in enumerate(body.splitlines(), 1):
             if version_re.search(line):
                 problems.append(f"{skill.parent.name}:{number}: hard-coded version number; look it up instead")
